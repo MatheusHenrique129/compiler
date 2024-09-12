@@ -41,7 +41,7 @@ EQ = 1005
 
 
 atomo_msg = ['Erro Léxico!', 'IDENTIFICADOR', 'NUM_INT   ', 'NUM_REAL', 'EOS',
-             'RELOP', 'ADDOP', 'MULOP', 'IF', 'THEN', 'ELSE   ', 'BEGIN    ' , 'END     ']
+             'RELOP', 'ADDOP', 'MULOP', 'IF', 'THEN', 'ELSE   ', 'BEGIN    ' , 'END     ','BOOLEAN' ,'DIV','DO','FALSE','INTEGER','MOD','PROGRAM','READ','TRUE','NOT','VAR','WHILE','WRITE']
 
 palavras_reservadas = {'if': IF, 'then': THEN, 'else': ELSE, 'begin': BEGIN, 'end': END,
                     'boolean': BOOLEAN, 'div': DIV, 'do': DO, 'false': FALSE, 'integer': INTEGER, 
