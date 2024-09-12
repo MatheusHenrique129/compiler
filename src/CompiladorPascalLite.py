@@ -2,57 +2,57 @@ from typing import NamedTuple
 from typing import Union
 import sys
 
-
 ERRO = 0
 IDENTIFICADOR = 1
 NUM_INT = 2
 NUM_REAL = 3
 EOS = 4
-EOS = 4
 RELOP = 5
 ADDOP = 6
 MULOP = 7
 
-#PALAVRAS RESERVADAS
-BEGIN = 8
-BOOL = 9
-DIV = 10
-DO = 11
-ELSE = 12
-END = 13
-FALSE = 14
-IF = 15
-INT = 16
-MOD = 17
-PROGRAM = 18
-READ = 19
-THEN = 20
-TRUE = 21
-NOT = 22
-VAR = 23
-WHILE = 24
-WRITE = 25
+# palavras reservadas
+IF = 8
+THEN = 9
+ELSE = 10
+BEGIN = 11
+END = 12
+BOOLEAN = 13
+DIV= 14
+DO= 15
+FALSE= 16
+INTEGER= 17
+MOD= 18
+PROGRAM= 19
+READ= 20
+TRUE= 21
+NOT= 21
+VAR= 22
+WHILE= 23
+WRITE= 24
 
 # operador relacional
-LE = 1000  # <=
-NE = 1001  # !=
-LT = 1002  # < 
-GE = 1003  # >=
-GT = 1004  # >
-EQ = 1005  # =
-
-atomo_msg = ['Erro Léxico!', 'IDENTIFICADOR', 'NUM_INT', 'NUM_REAL', 'EOS', 'RELOP', 'ADDOP', 'MULOP   ', 'IF     ', 'THEN     ', 'ELSE   ', 'BEGIN    ' , 'END     ']
+LE = 1000
+NE = 1001
+LT = 1002
+GE = 1003
+GT = 1004
+EQ = 1005
 
 
-palavras_reservadas = {'begin': BEGIN, 'boolean': BOOL, 'div': DIV, 'do': DO, 'else': ELSE, 'end':END, 'false': FALSE, 'if':IF, 
-                       'integer': INT, 'mod': MOD, 'program': PROGRAM, 'read': READ, 'then': THEN, 'true': TRUE, 'not': NOT,
-                       'var': VAR, 'while': WHILE, 'write': WRITE}
+atomo_msg = ['Erro Léxico!', 'IDENTIFICADOR', 'NUM_INT   ', 'NUM_REAL', 'EOS',
+             'RELOP', 'ADDOP', 'MULOP', 'IF', 'THEN', 'ELSE   ', 'BEGIN    ' , 'END     ']
+
+palavras_reservadas = {'if': IF, 'then': THEN, 'else': ELSE, 'begin': BEGIN, 'end': END,
+                    'boolean': BOOLEAN, 'div': DIV, 'do': DO, 'false': FALSE, 'integer': INTEGER, 
+                    'mod': MOD, 'program': PROGRAM, 'read': READ, 'true': TRUE, 'not': NOT, 'var': VAR, 
+                    'while': WHILE, 'write': WRITE}
 
 class Atomo(NamedTuple):
     tipo : int
     lexema : str
     valor : Union [int, float]
-    operador : int               
+    operador : int               # LE, NE, LT, GE, GT, EQ
     linha : int
 
 class Analisador_Lexico:
@@ -60,7 +60,7 @@ class Analisador_Lexico:
         self.linha = 1
         self.buffer = buffer + '\0'
         self.i = 0
-
+    
     def proximo_char(self):
         c = self.buffer[self.i]
         self.i += 1
@@ -72,22 +72,25 @@ class Analisador_Lexico:
     def proximo_atomo(self):
         atomo = Atomo(ERRO, '', 0, 0, self.linha)
         c = self.proximo_char()
-        while (c in [' ', '\n', '\t', '\0']):
+        while (c in [' ', '\n', '\t', '\r', '\0']):
             if (c == '\n'):
                 self.linha += 1
             if (c == '\0'):
                 return Atomo(EOS, '', 0, 0, self.linha)
             c = self.proximo_char()
+        if c in ['/', '(', '{']:  
+            comentario = self.tratar_comentario(c)
+            if comentario:
+                return comentario
         if c.isalpha() or c == '_':
             return self.tratar_identificador(c)
         elif c.isdigit():
             return self.tratar_numero(c)
         elif c == '<':
             return self.trata_operador_menor(c)
-        elif c == '=':
-            return Atomo(RELOP, '=', 0, EQ, self.linha)
+        elif c == ':':
+            return Atomo(RELOP, ':', 0, EQ, self.linha)
         return atomo
-        ########### TRATAR OS TIPOS DE ATOMOS...
 
     def trata_operador_menor(self, c: str):
         c = self.proximo_char()
@@ -108,7 +111,6 @@ class Analisador_Lexico:
                 self.retrair()
                 return Atomo(RELOP, '<', 0, LT, self.linha)
 
-
     def tratar_numero(self, c: str):
         lexema = c
         c = self.proximo_char()
@@ -119,34 +121,12 @@ class Analisador_Lexico:
                     lexema += c
                     estado = 1
                     c = self.proximo_char()
-                elif c == '.':
-                    lexema += c
-                    estado = 3
-                    c = self.proximo_char()
                 else:
                     estado = 2
             elif estado == 2:
                 self.retrair()
                 return Atomo(NUM_INT, lexema, int(lexema), 0, self.linha)
-            elif estado == 3:
-                if c.isdigit():
-                    lexema += c
-                    estado = 4
-                    c = self.proximo_char()
-                else:
-                    return Atomo(ERRO, '', 0, 0, self.linha)
-            elif estado == 4:
-                if c.isdigit():
-                    lexema += c
-                    estado = 4
-                    c = self.proximo_char()
-                else:
-                    estado = 5
-            elif estado == 5:
-                self.retrair()
-                valor = float(lexema)
-                return Atomo(NUM_REAL, lexema, valor, 0, self.linha)
-            
+
     def tratar_identificador(self, c: str):
         lexema = c
         c = self.proximo_char()
@@ -155,6 +135,8 @@ class Analisador_Lexico:
             if estado == 1:
                 if c.isdigit() or c.isalpha() or c == '_':
                     lexema += c
+                    if len(lexema) > 20:
+                        return Atomo(ERRO, lexema, 0, 0, self.linha)
                     estado = 1
                     c = self.proximo_char()
                 else:
@@ -167,12 +149,64 @@ class Analisador_Lexico:
                 else:
                     return Atomo(IDENTIFICADOR, lexema, 0, 0, self.linha)
                 
+    def tratar_comentario(self, inicial: str):
+        lexema = inicial
+        if inicial == '/':  
+            proximo = self.proximo_char()
+            if proximo == '/':
+                lexema += proximo
+                c = self.proximo_char()
+                while c != '\n' and c != '\0':  
+                    lexema += c
+                    c = self.proximo_char()
+                self.linha += 1
+                return Atomo(ERRO, lexema, 0, 0, self.linha)  
+            else:
+                self.retrair()  
+                return None  
+
+        elif inicial == '(': 
+            proximo = self.proximo_char()
+            if proximo == '*':
+                lexema += proximo
+                c = self.proximo_char()
+                while True:
+                    if c == '*' and self.proximo_char() == ')':
+                        lexema += '*)'
+                        break
+                    lexema += c
+                    if c == '\n':
+                        self.linha += 1  
+                    c = self.proximo_char()
+                return Atomo(ERRO, lexema, 0, 0, self.linha)  
+            else:
+                self.retrair()  
+                return None  
+
+        elif inicial == '{':  
+            c = self.proximo_char()
+            while c != '}' and c != '\0':  
+                lexema += c
+                if c == '\n':
+                    self.linha += 1  
+                c = self.proximo_char()
+            lexema += '}' 
+            return Atomo(ERRO, lexema, 0, 0, self.linha) 
+
+        return None  
+
+        
 def leia_arquivo():
     if len(sys.argv) > 1:
         nome_arquivo = sys.argv[1]
     else:
-        nome_arquivo = 'teste.txt'
+        nome_arquivo = 'teste2.txt'
 
+    arq = open(nome_arquivo)
+    buffer = arq.read()
+    arq.close()
+
+    return buffer
 
 def main():
     buffer = leia_arquivo()
