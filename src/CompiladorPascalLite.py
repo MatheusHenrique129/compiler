@@ -30,7 +30,7 @@ NOT= 21
 VAR= 22
 WHILE= 23
 WRITE= 24
-
+COMMENT = 25
 # operador relacional
 LE = 1000
 NE = 1001
@@ -41,12 +41,12 @@ EQ = 1005
 
 
 atomo_msg = ['Erro Léxico!', 'IDENTIFICADOR', 'NUM_INT   ', 'NUM_REAL', 'EOS',
-             'RELOP', 'ADDOP', 'MULOP', 'IF', 'THEN', 'ELSE   ', 'BEGIN    ' , 'END     ','BOOLEAN' ,'DIV','DO','FALSE','INTEGER','MOD','PROGRAM','READ','TRUE','NOT','VAR','WHILE','WRITE']
+             'RELOP', 'ADDOP', 'MULOP', 'IF', 'THEN', 'ELSE   ', 'BEGIN    ' , 'END     ','BOOLEAN' ,'DIV','DO','FALSE','INTEGER','MOD','PROGRAM','READ','TRUE','NOT','VAR','WHILE','WRITE', 'COMMENT']
 
 palavras_reservadas = {'if': IF, 'then': THEN, 'else': ELSE, 'begin': BEGIN, 'end': END,
                     'boolean': BOOLEAN, 'div': DIV, 'do': DO, 'false': FALSE, 'integer': INTEGER, 
                     'mod': MOD, 'program': PROGRAM, 'read': READ, 'true': TRUE, 'not': NOT, 'var': VAR, 
-                    'while': WHILE, 'write': WRITE}
+                    'while': WHILE, 'write': WRITE, 'comment':COMMENT}
 
 class Atomo(NamedTuple):
     tipo : int
@@ -178,7 +178,7 @@ class Analisador_Lexico:
                     if c == '\n':
                         self.linha += 1  
                     c = self.proximo_char()
-                return Atomo(ERRO, lexema, 0, 0, self.linha)  
+                return Atomo(COMMENT, lexema, 0, 0, self.linha)  
             else:
                 self.retrair()  
                 return None  
