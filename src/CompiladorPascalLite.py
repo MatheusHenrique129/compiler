@@ -32,6 +32,7 @@ WHILE= 24
 WRITE= 25
 COMMENT = 26
 PONTO_VIRG = 27
+VIRGULA = 28
 # operador relacional
 LE = 1000
 NE = 1001
@@ -42,12 +43,12 @@ EQ = 1005
 
 
 atomo_msg = ['Erro Léxico!', 'IDENTIFICADOR', 'NUM_INT   ', 'NUM_REAL', 'EOS',
-             'RELOP', 'ADDOP', 'MULOP', 'IF', 'THEN', 'ELSE   ', 'BEGIN    ' , 'END     ','BOOLEAN' ,'DIV','DO','FALSE','INTEGER','MOD','PROGRAM','READ','TRUE','NOT','VAR','WHILE','WRITE', 'COMMENT', 'PONTO_VIRG']
+             'RELOP', 'ADDOP', 'MULOP', 'IF', 'THEN', 'ELSE   ', 'BEGIN    ' , 'END     ','BOOLEAN' ,'DIV','DO','FALSE','INTEGER','MOD','PROGRAM','READ','TRUE','NOT','VAR','WHILE','WRITE', 'COMMENT', 'PONTO_VIRG', 'VIRGULA']
 
 palavras_reservadas = {'if': IF, 'then': THEN, 'else': ELSE, 'begin': BEGIN, 'end': END,
                     'boolean': BOOLEAN, 'div': DIV, 'do': DO, 'false': FALSE, 'integer': INTEGER, 
                     'mod': MOD, 'program': PROGRAM, 'read': READ, 'true': TRUE, 'not': NOT, 'var': VAR, 
-                    'while': WHILE, 'write': WRITE, 'comment':COMMENT, 'ponto_virg':PONTO_VIRG}
+                    'while': WHILE, 'write': WRITE, 'comment':COMMENT, 'ponto_virg':PONTO_VIRG, 'virgula':VIRGULA}
 
 class Atomo(NamedTuple):
     tipo : int
@@ -93,6 +94,8 @@ class Analisador_Lexico:
             return Atomo(RELOP, ':', 0, EQ, self.linha)
         elif c == ';':
             return Atomo(PONTO_VIRG, ';', 0, 0, self.linha)
+        elif c == ',':
+            return Atomo (VIRGULA, ',', 0, 0, self.linha)
         return atomo
 
     def trata_operador_menor(self, c: str):
