@@ -33,6 +33,8 @@ WRITE= 25
 COMMENT = 26
 PONTO_VIRG = 27
 VIRGULA = 28
+PARENTESES = 29
+
 # operador relacional
 LE = 1000
 NE = 1001
@@ -42,13 +44,16 @@ GT = 1004
 EQ = 1005
 
 
-atomo_msg = ['Erro Léxico!', 'IDENTIFICADOR', 'NUM_INT   ', 'NUM_REAL', 'EOS',
-             'RELOP', 'ADDOP', 'MULOP', 'IF', 'THEN', 'ELSE   ', 'BEGIN    ' , 'END     ','BOOLEAN' ,'DIV','DO','FALSE','INTEGER','MOD','PROGRAM','READ','TRUE','NOT','VAR','WHILE','WRITE', 'COMMENT', 'PONTO_VIRG', 'VIRGULA']
+atomo_msg = ['Erro Sintático!', 'IDENTIFICADOR', 'NUM_INT   ', 'NUM_REAL', 'EOS',
+             'RELOP', 'ADDOP', 'MULOP', 'IF', 'THEN', 'ELSE', 'BEGIN' , 'END',
+             'BOOLEAN' ,'DIV','DO','FALSE','INTEGER','MOD','PROGRAM','READ',
+             'TRUE','NOT','VAR','WHILE','WRITE', 'COMMENT', 'PONTO_VIRG', 'VIRGULA', 'PARENTESES']
 
 palavras_reservadas = {'if': IF, 'then': THEN, 'else': ELSE, 'begin': BEGIN, 'end': END,
                     'boolean': BOOLEAN, 'div': DIV, 'do': DO, 'false': FALSE, 'integer': INTEGER, 
                     'mod': MOD, 'program': PROGRAM, 'read': READ, 'true': TRUE, 'not': NOT, 'var': VAR, 
-                    'while': WHILE, 'write': WRITE, 'comment':COMMENT, 'ponto_virg':PONTO_VIRG, 'virgula':VIRGULA}
+                    'while': WHILE, 'write': WRITE, 'comment':COMMENT, 'ponto_virg':PONTO_VIRG, 
+                    'virgula':VIRGULA, 'parenteses': PARENTESES}
 
 class Atomo(NamedTuple):
     tipo : int
@@ -88,6 +93,13 @@ class Analisador_Lexico:
             return self.tratar_identificador(c)
         elif c.isdigit():
             return self.tratar_numero(c)
+        elif c== ':':
+            proximo=self.proximo_char()
+            if proximo == '=':
+                return Atomo(RELOP,':=',0, EQ, self.linha)
+            else:
+                self.retrair()
+                return Atomo(RELOP,':',0, 0, self.linha)
         elif c == '<':
             return self.trata_operador_menor(c)
         elif c == ':':
@@ -96,7 +108,12 @@ class Analisador_Lexico:
             return Atomo(PONTO_VIRG, ';', 0, 0, self.linha)
         elif c == ',':
             return Atomo (VIRGULA, ',', 0, 0, self.linha)
+        elif c== '(':
+            return Atomo(PARENTESES, '(', 0,0, self.linha)
+        elif c== ')':
+            return Atomo(PARENTESES, ')', 0,0, self.linha)
         return atomo
+        
 
     def trata_operador_menor(self, c: str):
         c = self.proximo_char()
