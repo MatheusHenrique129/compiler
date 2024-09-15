@@ -234,7 +234,7 @@ def read_file():
     if len(sys.argv) > 1:
         file_name = sys.argv[1]
     else:
-        file_name = 'case_success.pas'
+        file_name = 'input02.pas'
 
     arq = open(file_name)
     buffer = arq.read()
@@ -242,28 +242,27 @@ def read_file():
 
     return buffer
 
+def consume(atomo, lex):
+    while atomo.type not in [EOS, ERROR]:
+        print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]}\t\t lexema: {atomo.lexeme}', end='')
+
+        if atomo.value != 0:
+            print(f'\t\t valor: {atomo.value}')
+        else:
+            print()
+            
+        atomo = lex.next_atom()
+        
+    if atomo.type == ERROR:
+        print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]} Erro na linha {atomo.line}. Caractere inesperado "{lex.buffer[lex.i-1]}"')
+    else:
+        print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]}. {atomo.line} linhas analisadas, programa sintaticamente correto.')
+
 def main():
     buffer = read_file()
     lex = LexiconAnalyzer(buffer)
     atomo = lex.next_atom()
 
-    while (atomo.type != EOS and atomo.type != ERROR):
-        print(f'Linha: {atomo.line}', end='')
-        print(f' - átomo: {atomo_msg[atomo.type]}', end='')
-        print(f'\t\t lexema: {atomo.lexeme}', end='')
-
-        if atomo.value != 0:
-            print(f'\t\t valor: {atomo.value}')
-        else:
-            print(f'\t\t')
-            
-        atomo = lex.next_atom()
-        
-    
-    if atomo.type == ERROR:
-        print(f' - átomo: {atomo_msg[atomo.type]} Erro léxico na linha {atomo.line}: Caractere inesperado ({atomo.lexeme})')
-    else:
-        print(f'Linha: {atomo.line}', end='')
-        print(f' - átomo: {atomo_msg[atomo.type]}', end='')
+    consume(atomo, lex)
 
 main()
