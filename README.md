@@ -1,10 +1,12 @@
 # Compiler - Lexical and Syntactic Analysis
 
-The objective of this repository is to implement a Compiler with the lexical and syntactic analysis phases for a language based on the **Pascal language**, called **PascalLite**. The Compiler for **PascalLite** restricts the Pascal language to have only integer and logical (boolean) types, conditional statements **(if)** and repetition **(while)**. We will not implement the declaration and calls of functions in this language, the exception is the input **(read)** and output **(write)** functions implemented in a modified form.
+The objective of this repository is to implement a Compiler with the lexical and syntactic analysis phases for a language based on the Pascal language, called PascalLite. The Compiler for PascalLite restricts the Pascal language to have only integer and logical **(boolean)** types, conditional statements **(if)** and repetition **(while)**. We will not implement the declaration and calls of functions in this language, the exception is the input **(read)** and output **(write)** functions implemented in a modified form.
 
 When implementing the Compiler, the lexical analyzer must meet the needs of the syntactic analyzer. The interaction between the lexical analyzer and the syntactic analyzer will take place through the _**consume()**_ function (from the syntactic analyzer) which will make calls to the _**obtain_atomo()**_ function (from the lexical analyzer).
 
-<img align="right" alt="flow of the project" height="110px" src="./public/assets/preview.png" />
+<img align="right" width="100%" height="250px" alt="flow of the project" height="110px" src="./public/assets/preview.png"/>
+
+ &nbsp;
 
 If you want to know more about the specifications of this project, read the job [requirements doc](./docs/requirements-doc.pdf).
 
@@ -79,19 +81,19 @@ python3 compilerPascalLite.py
 
 Here you will explain how other developers can contribute to your project. For example, explaining how can create their branches, which patterns to follow and how to open an pull request
 
-1. **Clone project**
+1. Clone project
 
 ```bash
   git clone https://github.com/MatheusHenrique129/compiler.git
 ```
 
-2. **Create feature/branch**:
+2. Create feature/branch:
 
 ```bash
   git checkout -b feature/NAME
 ```
 
-3. Follow [commit patterns](<(https://gist.github.com/joshbuchea/6f47e86d2510bce28f8e7f42ae84c716)>)
+3. Follow [commit patterns](https://gist.github.com/joshbuchea/6f47e86d2510bce28f8e7f42ae84c716).
 
 4. Open a [Pull Request](https://www.atlassian.com/br/git/tutorials/making-a-pull-request) explaining the problem solved or feature made, if exists, append screenshot of visual modifications and wait for the review!
 
