@@ -1,15 +1,18 @@
 # Type of change
 
-- [ ] Added new project
-- [ ] Bug fix
-- [ ] New features
-- [ ] Enhanced documentation
+- [ ] 🚨 Bug fix
+- [ ] 🆕 New features
+- [ ] 📝 Enhanced documentation
+- [ ] 🧑‍💻 Refactor
+- [ ] ✅ Tests
+- [ ] 📦 Release
+- [ ] ⏩ Others
 
 # Changes proposed in this pull request
 
-- ### Project name :
+- ### Change made:
 
-- ### Short description :
+- ### Short description:
 
 ## Checklist
 

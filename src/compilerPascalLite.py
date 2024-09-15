@@ -34,6 +34,10 @@ COMMENT = 26
 PONTO_VIRG = 27
 VIRGULA = 28
 PARENTESES = 29
+SUM = 30
+SUB = 31
+MULT = 32
+
 
 # operador relacional
 LE = 1000
@@ -46,13 +50,13 @@ EQ = 1005
 atomo_msg = ['Erro Sintático!', 'IDENTIFIER', 'NUM_INT   ', 'NUM_REAL', 'EOS',
              'RELOP', 'ADDOP', 'MULOP', 'IF', 'THEN', 'ELSE', 'BEGIN' , 'END',
              'BOOLEAN' ,'DIV','DO','FALSE','INTEGER','MOD','PROGRAM','READ',
-             'TRUE','NOT','VAR','WHILE','WRITE', 'COMMENT', 'PONTO_VIRG', 'VIRGULA', 'PARENTESES']
+             'TRUE','NOT','VAR','WHILE','WRITE', 'COMMENT', 'PONTO_VIRG', 'VIRGULA', 'PARENTESES', 'SUM', 'SUB', 'MULT']
 
 reserved_words = {'if': IF, 'then': THEN, 'else': ELSE, 'begin': BEGIN, 'end': END,
                   'boolean': BOOLEAN, 'div': DIV, 'do': DO, 'false': FALSE, 'integer': INTEGER, 
                   'mod': MOD, 'program': PROGRAM, 'read': READ, 'true': TRUE, 'not': NOT, 'var': VAR, 
                   'while': WHILE, 'write': WRITE, 'comment':COMMENT, 'ponto_virg':PONTO_VIRG, 
-                  'virgula':VIRGULA, 'parenteses': PARENTESES}
+                  'virgula':VIRGULA, 'parenteses': PARENTESES, 'sum': SUM, 'sub': 'SUB', 'mult': MULT}
 
 class Atomo(NamedTuple):
     type: int
@@ -75,6 +79,7 @@ class LexiconAnalyzer:
     def retract(self):
         self.i -= 1
 
+    # analisador lexico
     def next_atom(self):
         atomo = Atomo(ERROR, '', 0, 0, self.line)
         c = self.next_char()
@@ -84,6 +89,7 @@ class LexiconAnalyzer:
             if (c == '\0'):
                 return Atomo(EOS, '', 0, 0, self.line)
             c = self.next_char()
+            
         if c in ['/', '(', '{']:  
             comentario = self.treat_comment(c)
             if comentario:
@@ -95,11 +101,11 @@ class LexiconAnalyzer:
         elif c== ':':
             nextChar=self.next_char()
             if nextChar == '=':
-                return Atomo(RELOP,':=',0, EQ, self.line)
+                return Atomo(RELOP,':=', 0, EQ, self.line)
             else:
                 self.retract()
                 return Atomo(RELOP,':',0, 0, self.line)
-        elif c == '<':
+        elif c == '<' or c == '>':
             return self.treat_operator_minor(c)
         elif c == ':':
             return Atomo(RELOP, ':', 0, EQ, self.line)
@@ -107,12 +113,19 @@ class LexiconAnalyzer:
             return Atomo(PONTO_VIRG, ';', 0, 0, self.line)
         elif c == ',':
             return Atomo(VIRGULA, ',', 0, 0, self.line)
-        elif c== '(':
-            return Atomo(PARENTESES, '(', 0,0, self.line)
-        elif c== ')':
-            return Atomo(PARENTESES, ')', 0,0, self.line)
+        elif c == '(':
+            return Atomo(PARENTESES, '(', 0, 0, self.line)
+        elif c == ')':
+            return Atomo(PARENTESES, ')', 0, 0, self.line)
+        elif c == '+':
+            return Atomo(SUM, '+', 0, 0, self.line)
+        elif c == '*':
+            return Atomo(MULT, '*', 0, 0, self.line)
+        elif c == '/':
+            return Atomo(DIV, '/', 0, 0, self.line)
+        elif c == '-':
+            return Atomo(SUB, '-', 0, 0, self.line)
         return atomo
-    
 
     def treat_operator_minor(self, c: str):
         c = self.next_char()
@@ -221,7 +234,7 @@ def read_file():
     if len(sys.argv) > 1:
         file_name = sys.argv[1]
     else:
-        file_name = 'input.txt'
+        file_name = 'case_success.pas'
 
     arq = open(file_name)
     buffer = arq.read()
@@ -233,15 +246,24 @@ def main():
     buffer = read_file()
     lex = LexiconAnalyzer(buffer)
     atomo = lex.next_atom()
-    
+
     while (atomo.type != EOS and atomo.type != ERROR):
         print(f'Linha: {atomo.line}', end='')
         print(f' - átomo: {atomo_msg[atomo.type]}', end='')
         print(f'\t\t lexema: {atomo.lexeme}', end='')
-        print(f'\t\t valor: {atomo.value}')
-        atomo = lex.next_atom()
 
-    print(f'Linha: {atomo.line}', end='')
-    print(f' - átomo: {atomo_msg[atomo.type]}', end='')
+        if atomo.value != 0:
+            print(f'\t\t valor: {atomo.value}')
+        else:
+            print(f'\t\t')
+            
+        atomo = lex.next_atom()
+        
+    
+    if atomo.type == ERROR:
+        print(f' - átomo: {atomo_msg[atomo.type]} Erro léxico na linha {atomo.line}: Caractere inesperado ({atomo.lexeme})')
+    else:
+        print(f'Linha: {atomo.line}', end='')
+        print(f' - átomo: {atomo_msg[atomo.type]}', end='')
 
 main()
