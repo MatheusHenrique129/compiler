@@ -37,6 +37,7 @@ PARENTESES = 29
 SUM = 30
 SUB = 31
 MULT = 32
+PONTO = 33
 
 
 # operador relacional
@@ -50,13 +51,13 @@ EQ = 1005
 atomo_msg = ['Erro Sintático!', 'IDENTIFIER', 'NUM_INT   ', 'NUM_REAL', 'EOS',
              'RELOP', 'ADDOP', 'MULOP', 'IF', 'THEN', 'ELSE', 'BEGIN' , 'END',
              'BOOLEAN' ,'DIV','DO','FALSE','INTEGER','MOD','PROGRAM','READ',
-             'TRUE','NOT','VAR','WHILE','WRITE', 'COMMENT', 'PONTO_VIRG', 'VIRGULA', 'PARENTESES', 'SUM', 'SUB', 'MULT']
+             'TRUE','NOT','VAR','WHILE','WRITE', 'COMMENT', 'PONTO_VIRG', 'VIRGULA', 'PARENTESES', 'SUM', 'SUB', 'MULT', 'PONTO']
 
 reserved_words = {'if': IF, 'then': THEN, 'else': ELSE, 'begin': BEGIN, 'end': END,
                   'boolean': BOOLEAN, 'div': DIV, 'do': DO, 'false': FALSE, 'integer': INTEGER, 
                   'mod': MOD, 'program': PROGRAM, 'read': READ, 'true': TRUE, 'not': NOT, 'var': VAR, 
                   'while': WHILE, 'write': WRITE, 'comment':COMMENT, 'ponto_virg':PONTO_VIRG, 
-                  'virgula':VIRGULA, 'parenteses': PARENTESES, 'sum': SUM, 'sub': 'SUB', 'mult': MULT}
+                  'virgula':VIRGULA, 'parenteses': PARENTESES, 'sum': SUM, 'sub': 'SUB', 'mult': MULT, 'ponto': PONTO}
 
 class Atomo(NamedTuple):
     type: int
@@ -125,6 +126,8 @@ class LexiconAnalyzer:
             return Atomo(DIV, '/', 0, 0, self.line)
         elif c == '-':
             return Atomo(SUB, '-', 0, 0, self.line)
+        elif c == '.':
+            return Atomo(PONTO, '.', 0, 0, self.line)
         return atomo
 
     def treat_operator_minor(self, c: str):
