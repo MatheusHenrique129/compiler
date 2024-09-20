@@ -108,26 +108,10 @@ class LexiconAnalyzer:
                 return Atomo(RELOP,':',0, 0, self.line)
         elif c == '<' or c == '>':
             return self.treat_operator_minor(c)
-        elif c == ':':
-            return Atomo(RELOP, ':', 0, EQ, self.line)
-        elif c == ';':
-            return Atomo(PONTO_VIRG, ';', 0, 0, self.line)
-        elif c == ',':
-            return Atomo(VIRGULA, ',', 0, 0, self.line)
-        elif c == '(':
-            return Atomo(PARENTESES, '(', 0, 0, self.line)
-        elif c == ')':
-            return Atomo(PARENTESES, ')', 0, 0, self.line)
-        elif c == '+':
-            return Atomo(SUM, '+', 0, 0, self.line)
-        elif c == '*':
-            return Atomo(MULT, '*', 0, 0, self.line)
-        elif c == '/':
-            return Atomo(DIV, '/', 0, 0, self.line)
-        elif c == '-':
-            return Atomo(SUB, '-', 0, 0, self.line)
-        elif c == '.':
-            return Atomo(PONTO, '.', 0, 0, self.line)
+        elif c in [';',',','(',')','.']:
+            return Atomo(self.treat_punctuation(c), c, 0, 0, self.line)
+        elif c in ['+','*','/','-']:
+            return Atomo(self.treat_math_operation(c), c, 0, 0, self.line)
         return atomo
 
     def treat_operator_minor(self, c: str):
@@ -232,7 +216,27 @@ class LexiconAnalyzer:
             return Atomo(ERROR, lexeme, 0, 0, self.line) 
 
         return None  
-    
+
+    def treat_punctuation(self, c):
+        if c == ';':
+            return PONTO_VIRG
+        if c == ',':
+            return VIRGULA
+        if c == '(' or c == ')':
+            return PARENTESES
+        if c == '.':
+            return PONTO
+
+    def treat_math_operation(self, c):
+        if c == '+':
+            return SUM
+        if c == '*':
+            return MULT
+        if c == '/':
+            return DIV
+        if c == '-':
+            return SUB
+   
 class SyntaxAnalyzer:
     def __init__(self, lexicon_analyzer):
         self.lex = lexicon_analyzer
