@@ -242,6 +242,12 @@ class SyntaxAnalyzer:
         raise Exception(f"Erro sintático na linha {self.current_token.line}: {message}")
 
     def consume(self, expected_type):
+        print(f'Linha: {self.current_token.line} - átomo: {atomo_msg[self.current_token.type]}\t\t lexema: {self.current_token.lexeme}', end='')
+        if self.current_token.value != 0:
+            print(f'\t\t valor: {self.current_token.value}')
+        else:
+            print()
+
         if self.current_token.type == expected_type:
             self.current_token = self.lex.next_atom()
         else:
@@ -430,32 +436,89 @@ def consume(atomo, lex):
 
 # main()
 
+# def main():
+#     buffer = read_file()
+#     lex = LexiconAnalyzer(buffer)
+#     parser = SyntaxAnalyzer(lex)
+  
+#     while atomo.type not in [EOS, ERROR]:
+#         print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]}\t\t lexema: {atomo.lexeme}', end='')
+
+#         if atomo.value != 0:
+#             print(f'\t\t valor: {atomo.value}')
+#         else:
+#             print()
+            
+#         atomo = lex.next_atom()
+        
+#     if atomo.type == ERROR:
+#         print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]} Erro na linha {atomo.line}. Caractere inesperado "{lex.buffer[lex.i-1]}"')
+#     else:
+#         print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]}. {atomo.line} linhas analisadas, programa sintaticamente correto.')
+
+    
+#     try:
+#         parser.parse()
+#         print("Análise sintática concluída com sucesso.")
+#     except Exception as e:
+#         print(f"Erro na análise sintática: {str(e)}")
+
+# main() 
+
+
+
+
+# def main():
+#     buffer = read_file()
+#     lex = LexiconAnalyzer(buffer)
+#     parser = SyntaxAnalyzer(lex)
+
+#     # Análise léxica
+#     print("Análise Léxica:")
+#     atomo = lex.next_atom()
+#     while atomo.type not in [EOS, ERROR]:
+#         print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]}\t\t lexema: {atomo.lexeme}', end='')
+#         if atomo.value != 0:
+#             print(f'\t\t valor: {atomo.value}')
+#         else:
+#             print()
+#         atomo = lex.next_atom()
+    
+#     if atomo.type == ERROR:
+#         print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]} Erro na linha {atomo.line}. Caractere inesperado "{lex.buffer[lex.i-1]}"')
+#     else:
+#         print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]}. {atomo.line} linhas analisadas, programa lexicamente correto.')
+
+#     # Reinicializa o analisador léxico para a análise sintática
+#     lex = LexiconAnalyzer(buffer)
+#     parser = SyntaxAnalyzer(lex)
+
+#     # Análise sintática
+#     print("\nAnálise Sintática:")
+#     try:
+#         parser.parse()
+#         print("Análise sintática concluída com sucesso.")
+#     except Exception as e:
+#         print(f"Erro na análise sintática: {str(e)}")
+
+# main()
+
 def main():
     buffer = read_file()
     lex = LexiconAnalyzer(buffer)
     parser = SyntaxAnalyzer(lex)
-    self.current_token = self.lex.next_atom()
 
-    while atomo.type not in [EOS, ERROR]:
-        print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]}\t\t lexema: {atomo.lexeme}', end='')
-
-        if atomo.value != 0:
-            print(f'\t\t valor: {atomo.value}')
-        else:
-            print()
-            
-        atomo = lex.next_atom()
-        
-    if atomo.type == ERROR:
-        print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]} Erro na linha {atomo.line}. Caractere inesperado "{lex.buffer[lex.i-1]}"')
-    else:
-        print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]}. {atomo.line} linhas analisadas, programa sintaticamente correto.')
-
-    
+    print("Análise Léxica e Sintática:")
     try:
+        lex = LexiconAnalyzer(buffer)
         parser.parse()
-        print("Análise sintática concluída com sucesso.")
+        print("Análise léxica e sintática concluída com sucesso.")
     except Exception as e:
-        print(f"Erro na análise sintática: {str(e)}")
+        print(f"Erro: {str(e)}")
+    
+    # Verificar se há algum átomo não processado
+    final_token = lex.next_atom()
+    if final_token.type != EOS:
+        print(f"Aviso: Há tokens não processados após o fim do programa na linha {final_token.line}")
 
-main() 
+main()
