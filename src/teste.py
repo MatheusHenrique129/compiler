@@ -433,6 +433,7 @@ def main():
     atomo=lex.next_atom()
     consume(atomo, lex)
     try:
+        lex = LexiconAnalyzer(buffer)
         lex.parse()
         print("Análise sintática concluída com sucesso.")
     except Exception as e:
