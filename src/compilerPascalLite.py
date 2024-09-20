@@ -232,12 +232,172 @@ class LexiconAnalyzer:
             return Atomo(ERROR, lexeme, 0, 0, self.line) 
 
         return None  
+    
+class SyntaxAnalyzer:
+    def __init__(self, lexicon_analyzer):
+        self.lex = lexicon_analyzer
+        self.current_token = None
+
+    def error(self, message):
+        raise Exception(f"Erro sintático na linha {self.current_token.line}: {message}")
+
+    def consume(self, expected_type):
+        if self.current_token.type == expected_type:
+            self.current_token = self.lex.next_atom()
+        else:
+            self.error(f"Esperado {atomo_msg[expected_type]}, encontrado {atomo_msg[self.current_token.type]}")
+
+    def parse(self):
+        self.current_token = self.lex.next_atom()
+        self.programa()
+
+    def programa(self):
+        self.consume(PROGRAM)
+        self.consume(IDENTIFIER)
+        if self.current_token.type == PARENTESES and self.current_token.lexeme == '(':
+            self.consume(PARENTESES)
+            self.lista_de_identificadores()
+            self.consume(PARENTESES)
+        self.consume(PONTO_VIRG)
+        self.bloco()
+        self.consume(PONTO)
+
+    def bloco(self):
+        if self.current_token.type == VAR:
+            self.declaracoes_de_variaveis()
+        self.comando_composto()
+
+    def declaracoes_de_variaveis(self):
+        self.consume(VAR)
+        self.declaracao()
+        self.consume(PONTO_VIRG)
+        while self.current_token.type == IDENTIFIER:
+            self.declaracao()
+            self.consume(PONTO_VIRG)
+
+    def declaracao(self):
+        self.lista_de_identificadores()
+        self.consume(RELOP)  # ':' é um RELOP
+        self.tipo()
+
+    def lista_de_identificadores(self):
+        self.consume(IDENTIFIER)
+        while self.current_token.type == VIRGULA:
+            self.consume(VIRGULA)
+            self.consume(IDENTIFIER)
+
+    def tipo(self):
+        if self.current_token.type == INTEGER:
+            self.consume(INTEGER)
+        elif self.current_token.type == BOOLEAN:
+            self.consume(BOOLEAN)
+        else:
+            self.error("Tipo inválido")
+
+    def comando_composto(self):
+        self.consume(BEGIN)
+        self.comando()
+        while self.current_token.type == PONTO_VIRG:
+            self.consume(PONTO_VIRG)
+            self.comando()
+        self.consume(END)
+
+    def comando(self):
+        if self.current_token.type == IDENTIFIER:
+            self.atribuicao()
+        elif self.current_token.type == READ:
+            self.comando_de_entrada()
+        elif self.current_token.type == WRITE:
+            self.comando_de_saida()
+        elif self.current_token.type == IF:
+            self.comando_if()
+        elif self.current_token.type == WHILE:
+            self.comando_while()
+        elif self.current_token.type == BEGIN:
+            self.comando_composto()
+        else:
+            self.error("Comando inválido")
+
+    def atribuicao(self):
+        self.consume(IDENTIFIER)
+        self.consume(RELOP)  # ':=' é um RELOP
+        self.expressao()
+
+    def comando_if(self):
+        self.consume(IF)
+        self.expressao()
+        self.consume(THEN)
+        self.comando()
+        if self.current_token.type == ELSE:
+            self.consume(ELSE)
+            self.comando()
+
+    def comando_while(self):
+        self.consume(WHILE)
+        self.expressao()
+        self.consume(DO)
+        self.comando()
+
+    def comando_de_entrada(self):
+        self.consume(READ)
+        self.consume(PARENTESES)
+        self.lista_de_identificadores()
+        self.consume(PARENTESES)
+
+    def comando_de_saida(self):
+        self.consume(WRITE)
+        self.consume(PARENTESES)
+        self.expressao()
+        while self.current_token.type == VIRGULA:
+            self.consume(VIRGULA)
+            self.expressao()
+        self.consume(PARENTESES)
+
+    def expressao(self):
+        self.expressao_simples()
+        if self.current_token.type == RELOP:
+            self.consume(RELOP)
+            self.expressao_simples()
+
+    def expressao_simples(self):
+        if self.current_token.type in [SUM, SUB]:
+            self.consume(self.current_token.type)
+        self.termo()
+        while self.current_token.type in [SUM, SUB, ADDOP]:
+            self.consume(self.current_token.type)
+            self.termo()
+
+    def termo(self):
+        self.fator()
+        while self.current_token.type in [MULT, DIV, MOD]:
+            self.consume(self.current_token.type)
+            self.fator()
+
+    def fator(self):
+        if self.current_token.type == IDENTIFIER:
+            self.consume(IDENTIFIER)
+        elif self.current_token.type in [NUM_INT, NUM_REAL]:
+            self.consume(self.current_token.type)
+        elif self.current_token.type == PARENTESES and self.current_token.lexeme == '(':
+            self.consume(PARENTESES)
+            self.expressao()
+            self.consume(PARENTESES)
+        elif self.current_token.type == TRUE:
+            self.consume(TRUE)
+        elif self.current_token.type == FALSE:
+            self.consume(FALSE)
+        elif self.current_token.type == NOT:
+            self.consume(NOT)
+            self.fator()
+        else:
+            self.error("Fator inválido")
+
      
 def read_file():
     if len(sys.argv) > 1:
         file_name = sys.argv[1]
     else:
-        file_name = 'input02.pas'
+        file_name = 'files/input02.pas'
 
     arq = open(file_name)
     buffer = arq.read()
@@ -261,11 +421,41 @@ def consume(atomo, lex):
     else:
         print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]}. {atomo.line} linhas analisadas, programa sintaticamente correto.')
 
+# def main():
+#     buffer = read_file()
+#     lex = LexiconAnalyzer(buffer)
+#     atomo = lex.next_atom()
+
+#     consume(atomo, lex)
+
+# main()
+
 def main():
     buffer = read_file()
     lex = LexiconAnalyzer(buffer)
-    atomo = lex.next_atom()
+    parser = SyntaxAnalyzer(lex)
+    self.current_token = self.lex.next_atom()
 
-    consume(atomo, lex)
+    while atomo.type not in [EOS, ERROR]:
+        print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]}\t\t lexema: {atomo.lexeme}', end='')
 
-main()
+        if atomo.value != 0:
+            print(f'\t\t valor: {atomo.value}')
+        else:
+            print()
+            
+        atomo = lex.next_atom()
+        
+    if atomo.type == ERROR:
+        print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]} Erro na linha {atomo.line}. Caractere inesperado "{lex.buffer[lex.i-1]}"')
+    else:
+        print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]}. {atomo.line} linhas analisadas, programa sintaticamente correto.')
+
+    
+    try:
+        parser.parse()
+        print("Análise sintática concluída com sucesso.")
+    except Exception as e:
+        print(f"Erro na análise sintática: {str(e)}")
+
+main() 
