@@ -1,21 +1,14 @@
-program ex01;
-var a, b, c: integer;
+(*programa le dois números
+inteiros e encontra o maior*)
+
+program ex02;
+var num1, num2: integer;
+   _maior : integer;
 begin
-   a := 10;
-   b := 20;
-   c := 30;
-   write(a / b);
-   write(a + c);
-   write(a);
-   write((a + 3) * 4);
-   if a > 10 then
-   begin
-      write(a+10);
-      a := a + 1
-   end
+   read(num1, num2);
+   if num1 > num2 then
+      _maior := n1
    else
-   begin
-      write(b+20);
-      b := b + 1
-   end
+      _maior := n2;
+   write(_maior)
 end.

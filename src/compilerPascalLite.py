@@ -14,7 +14,7 @@ NUM_REAL = 3
 EOS = 4
 RELOP = 5
 ADDOP = 6
-MULOP = 7
+MULOP = 7 
 
 # palavras reservadas
 IF = 8
@@ -53,24 +53,28 @@ GE = 1003
 GT = 1004
 EQ = 1005
 
+# Atomos
 atomo_msg = ['Erro Sintático!', 'IDENTIFIER', 'NUM_INT   ', 'NUM_REAL', 'EOS',
              'RELOP', 'ADDOP', 'MULOP', 'IF', 'THEN', 'ELSE', 'BEGIN' , 'END',
              'BOOLEAN' ,'DIV','DO','FALSE','INTEGER','MOD','PROGRAM','READ',
              'TRUE','NOT','VAR','WHILE','WRITE', 'COMMENT', 'PONTO_VIRG', 'VIRGULA', 'PARENTESES', 'SUM', 'SUB', 'MULT', 'PONTO']
 
+# Palavras reservadas
 reserved_words = {'if': IF, 'then': THEN, 'else': ELSE, 'begin': BEGIN, 'end': END,
                   'boolean': BOOLEAN, 'div': DIV, 'do': DO, 'false': FALSE, 'integer': INTEGER, 
                   'mod': MOD, 'program': PROGRAM, 'read': READ, 'true': TRUE, 'not': NOT, 'var': VAR, 
                   'while': WHILE, 'write': WRITE, 'comment':COMMENT, 'ponto_virg':PONTO_VIRG, 
                   'virgula':VIRGULA, 'parenteses': PARENTESES, 'sum': SUM, 'sub': 'SUB', 'mult': MULT, 'ponto': PONTO}
 
+# Obj. Atomo
 class Atomo(NamedTuple):
     type: int
     lexeme: str
     value: Union [int, float]
-    operator: int               # LE, NE, LT, GE, GT, EQ
+    operator: int               
     line: int
 
+# Analisador Lexico
 class LexiconAnalyzer:
     def __init__(self, buffer: str):
         self.line = 1
@@ -82,10 +86,10 @@ class LexiconAnalyzer:
         self.i += 1
         return c
     
-    def retract(self):
+    def prev_char(self):
         self.i -= 1
 
-    # analisador lexico
+    # analisador lexico dos atomos
     def next_atom(self):
         atomo = Atomo(ERROR, '', 0, 0, self.line)
         c = self.next_char()
@@ -95,7 +99,6 @@ class LexiconAnalyzer:
             if (c == '\0'):
                 return Atomo(EOS, '', 0, 0, self.line)
             c = self.next_char()
-            
         if c in ['/', '(', '{']:  
             comentario = self.treat_comment(c)
             if comentario:
@@ -109,7 +112,7 @@ class LexiconAnalyzer:
             if nextChar == '=':
                 return Atomo(RELOP,':=', 0, EQ, self.line)
             else:
-                self.retract()
+                self.prev_char()
                 return Atomo(RELOP,':',0, 0, self.line)
         elif c == '<' or c == '>':
             return self.treat_operator_minor(c)
@@ -136,7 +139,7 @@ class LexiconAnalyzer:
             elif state == 3:
                 return Atomo(RELOP, '<>', 0, NE, self.line)
             elif state == 4:
-                self.retract()
+                self.prev_char()
                 return Atomo(RELOP, '<', 0, LT, self.line)
 
     # trata os numeros
@@ -153,7 +156,7 @@ class LexiconAnalyzer:
                 else:
                     state = 2
             elif state == 2:
-                self.retract()
+                self.prev_char()
                 return Atomo(NUM_INT, lexeme, int(lexeme), 0, self.line)
     
     # trata identificadores
@@ -172,7 +175,7 @@ class LexiconAnalyzer:
                 else:
                     state = 2
             elif state == 2:
-                self.retract()
+                self.prev_char()
                 if lexeme.lower() in reserved_words:
                     reserved = reserved_words[lexeme.lower()]
                     return Atomo(reserved, lexeme, 0, 0, self.line)
@@ -182,6 +185,7 @@ class LexiconAnalyzer:
     # trata comentarios
     def treat_comment(self, initial: str):
         lexeme = initial
+        #começando com //
         if initial == '/':  
             nextChar = self.next_char()
             if nextChar == '/':
@@ -193,9 +197,9 @@ class LexiconAnalyzer:
                 self.line += 1
                 return Atomo(ERROR, lexeme, 0, 0, self.line)  
             else:
-                self.retract()  
+                self.prev_char()  
                 return None  
-
+        # começando com (*
         elif initial == '(': 
             nextChar = self.next_char()
             if nextChar == '*':
@@ -211,9 +215,9 @@ class LexiconAnalyzer:
                     c = self.next_char()
                 return Atomo(COMMENT, lexeme, 0, 0, self.line)  
             else:
-                self.retract()  
+                self.prev_char()  
                 return None  
-
+        # comentário em bloco {}
         elif initial == '{':  
             c = self.next_char()
             while c != '}' and c != '\0':  
@@ -223,7 +227,6 @@ class LexiconAnalyzer:
                 c = self.next_char()
             lexeme += '}' 
             return Atomo(ERROR, lexeme, 0, 0, self.line) 
-
         return None  
 
     #trata pontuacao
@@ -252,31 +255,31 @@ class LexiconAnalyzer:
 class SyntaxAnalyzer:
     def __init__(self, lexicon_analyzer):
         self.lex = lexicon_analyzer
-        self.current_token = None
+        self.lookahead = None
 
     def error(self, message):
-        raise Exception(f"Erro sintático na linha {self.current_token.line}: {message}")
+        raise Exception(f"Erro sintático na linha {self.lookahead.line}: {message}")
 
     def consume(self, expected_type):
-        print(f'Linha: {self.current_token.line} - átomo: {atomo_msg[self.current_token.type]}\t\t lexema: {self.current_token.lexeme}', end='')
-        if self.current_token.value != 0:
-            print(f'\t\t valor: {self.current_token.value}')
+        print(f'Linha: {self.lookahead.line} - átomo: {atomo_msg[self.lookahead.type]}\t\t lexema: {self.lookahead.lexeme}', end='')
+        if self.lookahead.value != 0:
+            print(f'\t\t valor: {self.lookahead.value}')
         else:
             print()
 
-        if self.current_token.type == expected_type:
-            self.current_token = self.lex.next_atom()
+        if self.lookahead.type == expected_type:
+            self.lookahead = self.lex.next_atom()
         else:
-            self.error(f"Esperado {atomo_msg[expected_type]}, encontrado {atomo_msg[self.current_token.type]}")
+            self.error(f"Esperado {atomo_msg[expected_type]}, encontrado {atomo_msg[self.lookahead.type]}")
 
     def parse(self):
-        self.current_token = self.lex.next_atom()
+        self.lookahead = self.lex.next_atom()
         self.programa()
 
     def programa(self):
         self.consume(PROGRAM)
         self.consume(IDENTIFIER)
-        if self.current_token.type == PARENTESES and self.current_token.lexeme == '(':
+        if self.lookahead.type == PARENTESES and self.lookahead.lexeme == '(':
             self.consume(PARENTESES)
             self.lista_de_identificadores()
             self.consume(PARENTESES)
@@ -285,7 +288,7 @@ class SyntaxAnalyzer:
         self.consume(PONTO)
 
     def bloco(self):
-        if self.current_token.type == VAR:
+        if self.lookahead.type == VAR:
             self.declaracoes_de_variaveis()
         self.comando_composto()
 
@@ -293,25 +296,25 @@ class SyntaxAnalyzer:
         self.consume(VAR)
         self.declaracao()
         self.consume(PONTO_VIRG)
-        while self.current_token.type == IDENTIFIER:
+        while self.lookahead.type == IDENTIFIER:
             self.declaracao()
             self.consume(PONTO_VIRG)
 
     def declaracao(self):
         self.lista_de_identificadores()
-        self.consume(RELOP)  # ':' é um RELOP
+        self.consume(RELOP)  # '=:' é um RELOP
         self.tipo()
 
     def lista_de_identificadores(self):
         self.consume(IDENTIFIER)
-        while self.current_token.type == VIRGULA:
+        while self.lookahead.type == VIRGULA:
             self.consume(VIRGULA)
             self.consume(IDENTIFIER)
 
     def tipo(self):
-        if self.current_token.type == INTEGER:
+        if self.lookahead.type == INTEGER:
             self.consume(INTEGER)
-        elif self.current_token.type == BOOLEAN:
+        elif self.lookahead.type == BOOLEAN:
             self.consume(BOOLEAN)
         else:
             self.error("Tipo inválido")
@@ -319,23 +322,23 @@ class SyntaxAnalyzer:
     def comando_composto(self):
         self.consume(BEGIN)
         self.comando()
-        while self.current_token.type == PONTO_VIRG:
+        while self.lookahead.type == PONTO_VIRG:
             self.consume(PONTO_VIRG)
             self.comando()
         self.consume(END)
 
     def comando(self):
-        if self.current_token.type == IDENTIFIER:
+        if self.lookahead.type == IDENTIFIER:
             self.atribuicao()
-        elif self.current_token.type == READ:
+        elif self.lookahead.type == READ:
             self.comando_de_entrada()
-        elif self.current_token.type == WRITE:
+        elif self.lookahead.type == WRITE:
             self.comando_de_saida()
-        elif self.current_token.type == IF:
+        elif self.lookahead.type == IF:
             self.comando_if()
-        elif self.current_token.type == WHILE:
+        elif self.lookahead.type == WHILE:
             self.comando_while()
-        elif self.current_token.type == BEGIN:
+        elif self.lookahead.type == BEGIN:
             self.comando_composto()
         else:
             self.error("Comando inválido")
@@ -350,7 +353,7 @@ class SyntaxAnalyzer:
         self.expressao()
         self.consume(THEN)
         self.comando()
-        if self.current_token.type == ELSE:
+        if self.lookahead.type == ELSE:
             self.consume(ELSE)
             self.comando()
 
@@ -370,45 +373,45 @@ class SyntaxAnalyzer:
         self.consume(WRITE)
         self.consume(PARENTESES)
         self.expressao()
-        while self.current_token.type == VIRGULA:
+        while self.lookahead.type == VIRGULA:
             self.consume(VIRGULA)
             self.expressao()
         self.consume(PARENTESES)
 
     def expressao(self):
         self.expressao_simples()
-        if self.current_token.type == RELOP:
+        if self.lookahead.type == RELOP:
             self.consume(RELOP)
             self.expressao_simples()
 
     def expressao_simples(self):
-        if self.current_token.type in [SUM, SUB]:
-            self.consume(self.current_token.type)
+        if self.lookahead.type in [SUM, SUB]:
+            self.consume(self.lookahead.type)
         self.termo()
-        while self.current_token.type in [SUM, SUB, ADDOP]:
-            self.consume(self.current_token.type)
+        while self.lookahead.type in [SUM, SUB, ADDOP]:
+            self.consume(self.lookahead.type)
             self.termo()
 
     def termo(self):
         self.fator()
-        while self.current_token.type in [MULT, DIV, MOD]:
-            self.consume(self.current_token.type)
+        while self.lookahead.type in [MULT, DIV, MOD]:
+            self.consume(self.lookahead.type)
             self.fator()
 
     def fator(self):
-        if self.current_token.type == IDENTIFIER:
+        if self.lookahead.type == IDENTIFIER:
             self.consume(IDENTIFIER)
-        elif self.current_token.type in [NUM_INT, NUM_REAL]:
-            self.consume(self.current_token.type)
-        elif self.current_token.type == PARENTESES and self.current_token.lexeme == '(':
+        elif self.lookahead.type in [NUM_INT, NUM_REAL]:
+            self.consume(self.lookahead.type)
+        elif self.lookahead.type == PARENTESES and self.lookahead.lexeme == '(':
             self.consume(PARENTESES)
             self.expressao()
             self.consume(PARENTESES)
-        elif self.current_token.type == TRUE:
+        elif self.lookahead.type == TRUE:
             self.consume(TRUE)
-        elif self.current_token.type == FALSE:
+        elif self.lookahead.type == FALSE:
             self.consume(FALSE)
-        elif self.current_token.type == NOT:
+        elif self.lookahead.type == NOT:
             self.consume(NOT)
             self.fator()
         else:
@@ -419,7 +422,7 @@ def read_file():
     if len(sys.argv) > 1:
         file_name = sys.argv[1]
     else:
-        file_name = 'files/input02.pas'
+        file_name = r'C:\Users\gugsr\OneDrive\Documents\GitHub\compiler\src\files\input02.pas'
 
     arq = open(file_name)
     buffer = arq.read()
