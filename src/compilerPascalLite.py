@@ -1,3 +1,8 @@
+# Bruna Tiemi Tarumoto Watanabe
+# Gustavo Goes Sant'Ana
+# Kaiky Amorim dos Santos
+# Matheus Henrique Santos da Silva
+
 from typing import NamedTuple
 from typing import Union
 import sys
