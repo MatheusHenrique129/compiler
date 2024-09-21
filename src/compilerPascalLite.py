@@ -114,6 +114,7 @@ class LexiconAnalyzer:
             return Atomo(self.treat_math_operation(c), c, 0, 0, self.line)
         return atomo
 
+    # trata operadores maior, menor e igual
     def treat_operator_minor(self, c: str):
         c = self.next_char()
         state = 1
@@ -133,6 +134,7 @@ class LexiconAnalyzer:
                 self.retract()
                 return Atomo(RELOP, '<', 0, LT, self.line)
 
+    # trata os numeros
     def treat_number(self, c: str):
         lexeme = c
         c = self.next_char()
@@ -148,7 +150,8 @@ class LexiconAnalyzer:
             elif state == 2:
                 self.retract()
                 return Atomo(NUM_INT, lexeme, int(lexeme), 0, self.line)
-
+    
+    # trata identificadores
     def treat_identifier(self, c: str):
         lexeme = c
         c = self.next_char()
@@ -170,7 +173,8 @@ class LexiconAnalyzer:
                     return Atomo(reserved, lexeme, 0, 0, self.line)
                 else:
                     return Atomo(IDENTIFIER, lexeme, 0, 0, self.line)
-                
+
+    # trata comentarios
     def treat_comment(self, initial: str):
         lexeme = initial
         if initial == '/':  
@@ -217,6 +221,7 @@ class LexiconAnalyzer:
 
         return None  
 
+    #trata pontuacao
     def treat_punctuation(self, c):
         if c == ';':
             return PONTO_VIRG
@@ -227,6 +232,7 @@ class LexiconAnalyzer:
         if c == '.':
             return PONTO
 
+    #trata operadores matematicos
     def treat_math_operation(self, c):
         if c == '+':
             return SUM
@@ -236,7 +242,8 @@ class LexiconAnalyzer:
             return DIV
         if c == '-':
             return SUB
-   
+
+# analizador sintaxico
 class SyntaxAnalyzer:
     def __init__(self, lexicon_analyzer):
         self.lex = lexicon_analyzer
@@ -402,7 +409,7 @@ class SyntaxAnalyzer:
         else:
             self.error("Fator inválido")
 
-     
+# le o arquivo
 def read_file():
     if len(sys.argv) > 1:
         file_name = sys.argv[1]
@@ -430,82 +437,6 @@ def consume(atomo, lex):
         print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]} Erro na linha {atomo.line}. Caractere inesperado "{lex.buffer[lex.i-1]}"')
     else:
         print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]}. {atomo.line} linhas analisadas, programa sintaticamente correto.')
-
-# def main():
-#     buffer = read_file()
-#     lex = LexiconAnalyzer(buffer)
-#     atomo = lex.next_atom()
-
-#     consume(atomo, lex)
-
-# main()
-
-# def main():
-#     buffer = read_file()
-#     lex = LexiconAnalyzer(buffer)
-#     parser = SyntaxAnalyzer(lex)
-  
-#     while atomo.type not in [EOS, ERROR]:
-#         print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]}\t\t lexema: {atomo.lexeme}', end='')
-
-#         if atomo.value != 0:
-#             print(f'\t\t valor: {atomo.value}')
-#         else:
-#             print()
-            
-#         atomo = lex.next_atom()
-        
-#     if atomo.type == ERROR:
-#         print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]} Erro na linha {atomo.line}. Caractere inesperado "{lex.buffer[lex.i-1]}"')
-#     else:
-#         print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]}. {atomo.line} linhas analisadas, programa sintaticamente correto.')
-
-    
-#     try:
-#         parser.parse()
-#         print("Análise sintática concluída com sucesso.")
-#     except Exception as e:
-#         print(f"Erro na análise sintática: {str(e)}")
-
-# main() 
-
-
-
-
-# def main():
-#     buffer = read_file()
-#     lex = LexiconAnalyzer(buffer)
-#     parser = SyntaxAnalyzer(lex)
-
-#     # Análise léxica
-#     print("Análise Léxica:")
-#     atomo = lex.next_atom()
-#     while atomo.type not in [EOS, ERROR]:
-#         print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]}\t\t lexema: {atomo.lexeme}', end='')
-#         if atomo.value != 0:
-#             print(f'\t\t valor: {atomo.value}')
-#         else:
-#             print()
-#         atomo = lex.next_atom()
-    
-#     if atomo.type == ERROR:
-#         print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]} Erro na linha {atomo.line}. Caractere inesperado "{lex.buffer[lex.i-1]}"')
-#     else:
-#         print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]}. {atomo.line} linhas analisadas, programa lexicamente correto.')
-
-#     # Reinicializa o analisador léxico para a análise sintática
-#     lex = LexiconAnalyzer(buffer)
-#     parser = SyntaxAnalyzer(lex)
-
-#     # Análise sintática
-#     print("\nAnálise Sintática:")
-#     try:
-#         parser.parse()
-#         print("Análise sintática concluída com sucesso.")
-#     except Exception as e:
-#         print(f"Erro na análise sintática: {str(e)}")
-
-# main()
 
 def main():
     buffer = read_file()
