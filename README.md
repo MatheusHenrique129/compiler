@@ -6,7 +6,7 @@ When implementing the Compiler, the lexical analyzer must meet the needs of the 
 
 <img align="right" width="100%" height="250px" alt="flow of the project" height="110px" src="./public/assets/preview.png"/>
 
- &nbsp;
+&nbsp;
 
 If you want to know more about the specifications of this project, read the job [requirements doc](./docs/requirements-doc.pdf).
 
@@ -26,12 +26,12 @@ Add the following to gettin's started
 git clone https://github.com/MatheusHenrique129/compiler.git
 ```
 
-3. **Running the project**:
+2. **Running the project**:
 
 In the `src` folder, run the command:
 
 ```py
-python3 compilerPascalLite.py
+python3 main.py
 ```
 
 ## 🤝 Collaborators ✨
