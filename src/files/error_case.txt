@@ -1,0 +1,11 @@
+program ex02;
+var num1, num2: integer;
+    _maior : integer;
+begin
+    read(num1,num2);
+    if num1 > num2 then
+        _maior := num1
+    else
+        _maior := num2;
+    write(_maior)
+end
