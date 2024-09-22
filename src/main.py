@@ -279,8 +279,9 @@ class SyntaxAnalyzer:
 
         if self.lookahead.type == expected_type:
             self.lookahead = self.lex.next_atom()
+            self.handle_comment() # valida se o proximo atomo é um Comentário
         else:
-            self.error(f"Esperado {atomo_msg[expected_type]}, encontrado {atomo_msg[self.lookahead.type]}")
+            self.error(f"Esperado [ {atomo_msg[expected_type]} ], encontrado [ {atomo_msg[self.lookahead.type]} ]")
 
     def synthetic(self):
         self.lookahead = self.lex.next_atom()
@@ -300,10 +301,8 @@ class SyntaxAnalyzer:
         self.consume(PONTO_VIRG)
         self.block()
         self.consume(DOT)
-        self.handle_comment() # Trata comentários após o final do programa
 
     def block(self):
-        self.handle_comment()
         if self.lookahead.type == VAR:
             self.variable_declarations()
         self.compound_command()
@@ -336,7 +335,6 @@ class SyntaxAnalyzer:
             self.error("Tipo inválido")
 
     def compound_command(self):
-        self.handle_comment()
         self.consume(BEGIN)
         self.command()
         while self.lookahead.type == PONTO_VIRG:
@@ -345,7 +343,6 @@ class SyntaxAnalyzer:
         self.consume(END)
 
     def command(self):
-        self.handle_comment() # Valida e trata se for um Comentário
         if self.lookahead.type == IDENTIFIER:
             self.assignment()
         elif self.lookahead.type == READ:
@@ -371,7 +368,6 @@ class SyntaxAnalyzer:
         self.expression()
         self.consume(THEN)
         self.command()
-        self.handle_comment() # Valida se existe um comentario depois do comando
         if self.lookahead.type == ELSE:
             self.consume(ELSE)
             self.command()
@@ -441,7 +437,7 @@ def read_file():
     if len(sys.argv) > 1:
         file_name = sys.argv[1]
     else:
-        file_name = 'files/comment_case.pas'
+        file_name = 'files/error_case.txt'
 
     arq = open(file_name)
     buffer = arq.read()
