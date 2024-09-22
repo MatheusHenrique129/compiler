@@ -8,4 +8,4 @@ begin
     else
         _maior := num2;
     write(_maior)
-end.
+end
