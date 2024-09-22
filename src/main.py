@@ -1,7 +1,11 @@
-# Bruna Tiemi Tarumoto Watanabe
-# Gustavo Goes Sant'Ana
-# Kaiky Amorim dos Santos
-# Matheus Henrique Santos da Silva
+################################################################################
+# Avaliação Parcial 01 - Prof: Leonardo Massayuki Takuno                       #
+#                                                                              #
+# Bruna Tiemi Tarumoto Watanabe - 1904272                                      #
+# Gustavo Goes Sant'Ana - 2201501                                              #
+# Kaiky Amorim dos Santos - 2200387                                            #
+# Matheus Henrique Santos da Silva - 2200973                                   #
+################################################################################
 
 from typing import NamedTuple
 from typing import Union
@@ -14,7 +18,7 @@ NUM_REAL = 3
 EOS = 4
 RELOP = 5
 ADDOP = 6
-MULOP = 7 
+MULOP = 7
 
 # palavras reservadas
 IF = 8
@@ -38,12 +42,11 @@ WRITE= 25
 COMMENT = 26
 PONTO_VIRG = 27
 VIRGULA = 28
-PARENTESES = 29
+PARENTHESIS = 29
 SUM = 30
 SUB = 31
 MULT = 32
-PONTO = 33
-
+DOT = 33
 
 # operador relacional
 LE = 1000
@@ -57,21 +60,22 @@ EQ = 1005
 atomo_msg = ['Erro Sintático!', 'IDENTIFIER', 'NUM_INT   ', 'NUM_REAL', 'EOS',
              'RELOP', 'ADDOP', 'MULOP', 'IF', 'THEN', 'ELSE', 'BEGIN' , 'END',
              'BOOLEAN' ,'DIV','DO','FALSE','INTEGER','MOD','PROGRAM','READ',
-             'TRUE','NOT','VAR','WHILE','WRITE', 'COMMENT', 'PONTO_VIRG', 'VIRGULA', 'PARENTESES', 'SUM', 'SUB', 'MULT', 'PONTO']
+             'TRUE','NOT','VAR','WHILE','WRITE', 'COMMENT', 'PONTO_VIRG', 'VIRGULA',
+             'PARENTHESIS', 'SUM', 'SUB', 'MULT', 'DOT']
 
 # Palavras reservadas
 reserved_words = {'if': IF, 'then': THEN, 'else': ELSE, 'begin': BEGIN, 'end': END,
                   'boolean': BOOLEAN, 'div': DIV, 'do': DO, 'false': FALSE, 'integer': INTEGER, 
                   'mod': MOD, 'program': PROGRAM, 'read': READ, 'true': TRUE, 'not': NOT, 'var': VAR, 
                   'while': WHILE, 'write': WRITE, 'comment':COMMENT, 'ponto_virg':PONTO_VIRG, 
-                  'virgula':VIRGULA, 'parenteses': PARENTESES, 'sum': SUM, 'sub': 'SUB', 'mult': MULT, 'ponto': PONTO}
+                  'virgula':VIRGULA, 'parenthesis': PARENTHESIS, 'sum': SUM, 'sub': SUB, 'mult': MULT, 'dot': DOT}
 
 # Obj. Atomo
 class Atomo(NamedTuple):
     type: int
     lexeme: str
-    value: Union [int, float]
-    operator: int               
+    value: Union[int, float]
+    operator: int
     line: int
 
 # Analisador Lexico
@@ -98,11 +102,11 @@ class LexiconAnalyzer:
                 self.line += 1
             if (c == '\0'):
                 return Atomo(EOS, '', 0, 0, self.line)
-            c = self.next_char()
+            c = self.next_char()     
         if c in ['/', '(', '{']:  
-            comentario = self.treat_comment(c)
-            if comentario:
-                return comentario
+            comment = self.treat_comment(c)
+            if comment:
+                return comment
         if c.isalpha() or c == '_':
             return self.treat_identifier(c)
         elif c.isdigit():
@@ -185,48 +189,53 @@ class LexiconAnalyzer:
     # trata comentarios
     def treat_comment(self, initial: str):
         lexeme = initial
-        #começando com //
-        if initial == '/':  
+        # Trata Comentário de linha única, começando com //
+        if initial == '/':
             nextChar = self.next_char()
             if nextChar == '/':
                 lexeme += nextChar
-                c = self.next_char()
-                while c != '\n' and c != '\0':  
-                    lexeme += c
+                while True:
                     c = self.next_char()
-                self.line += 1
-                return Atomo(ERROR, lexeme, 0, 0, self.line)  
+                    if c == '\n' or c == '\0':
+                        self.line += 1
+                        break
+                    lexeme += c
+                return Atomo(COMMENT, lexeme, 0, 0, self.line)
             else:
                 self.prev_char()  
                 return None  
-        # começando com (*
-        elif initial == '(': 
+
+        # Trata Comentário de múltiplas linhas (*...*)
+        elif initial == '(':
             nextChar = self.next_char()
             if nextChar == '*':
                 lexeme += nextChar
-                c = self.next_char()
                 while True:
+                    c = self.next_char()
+                    if c == '\0':  # Chegou ao final do arquivo sem fechar o comentário
+                        return Atomo(ERROR, lexeme, 0, 0, self.line)
+                    if c == '\n':
+                        self.line += 1
                     if c == '*' and self.next_char() == ')':
                         lexeme += '*)'
-                        break
+                        return Atomo(COMMENT, lexeme, 0, 0, self.line)
                     lexeme += c
-                    if c == '\n':
-                        self.line += 1  
-                    c = self.next_char()
-                return Atomo(COMMENT, lexeme, 0, 0, self.line)  
             else:
                 self.prev_char()  
                 return None  
-        # comentário em bloco {}
-        elif initial == '{':  
-            c = self.next_char()
-            while c != '}' and c != '\0':  
+
+        # Trata Comentário de bloco {...}
+        elif initial == '{':
+            while True:
+                c = self.next_char()
+                if c == '\0':
+                    return Atomo(ERROR, lexeme, 0, 0, self.line)
                 lexeme += c
                 if c == '\n':
-                    self.line += 1  
-                c = self.next_char()
-            lexeme += '}' 
-            return Atomo(ERROR, lexeme, 0, 0, self.line) 
+                    self.line += 1
+                if c == '}':
+                    return Atomo(COMMENT, lexeme, 0, 0, self.line)
+        
         return None  
 
     #trata pontuacao
@@ -236,9 +245,9 @@ class LexiconAnalyzer:
         if c == ',':
             return VIRGULA
         if c == '(' or c == ')':
-            return PARENTESES
+            return PARENTHESIS
         if c == '.':
-            return PONTO
+            return DOT
 
     #trata operadores matematicos
     def treat_math_operation(self, c):
@@ -261,6 +270,7 @@ class SyntaxAnalyzer:
         raise Exception(f"Erro sintático na linha {self.lookahead.line}: {message}")
 
     def consume(self, expected_type):
+        self.handle_comment() # valida se tem um Comentário antes de consumir o atomo
         print(f'Linha: {self.lookahead.line} - átomo: {atomo_msg[self.lookahead.type]}\t\t lexema: {self.lookahead.lexeme}', end='')
         if self.lookahead.value != 0:
             print(f'\t\t valor: {self.lookahead.value}')
@@ -272,46 +282,52 @@ class SyntaxAnalyzer:
         else:
             self.error(f"Esperado {atomo_msg[expected_type]}, encontrado {atomo_msg[self.lookahead.type]}")
 
-    def parse(self):
+    def synthetic(self):
         self.lookahead = self.lex.next_atom()
-        self.programa()
+        self.program()
 
-    def programa(self):
+    def handle_comment(self):
+        while self.lookahead.type == COMMENT:
+            self.lookahead = self.lex.next_atom()
+
+    def program(self):
         self.consume(PROGRAM)
         self.consume(IDENTIFIER)
-        if self.lookahead.type == PARENTESES and self.lookahead.lexeme == '(':
-            self.consume(PARENTESES)
-            self.lista_de_identificadores()
-            self.consume(PARENTESES)
+        if self.lookahead.type == PARENTHESIS and self.lookahead.lexeme == '(':
+            self.consume(PARENTHESIS)
+            self.list_identifiers()
+            self.consume(PARENTHESIS)
         self.consume(PONTO_VIRG)
-        self.bloco()
-        self.consume(PONTO)
+        self.block()
+        self.consume(DOT)
+        self.handle_comment() # Trata comentários após o final do programa
 
-    def bloco(self):
+    def block(self):
+        self.handle_comment()
         if self.lookahead.type == VAR:
-            self.declaracoes_de_variaveis()
-        self.comando_composto()
+            self.variable_declarations()
+        self.compound_command()
 
-    def declaracoes_de_variaveis(self):
+    def variable_declarations(self):
         self.consume(VAR)
-        self.declaracao()
+        self.declaration()
         self.consume(PONTO_VIRG)
         while self.lookahead.type == IDENTIFIER:
-            self.declaracao()
+            self.declaration()
             self.consume(PONTO_VIRG)
 
-    def declaracao(self):
-        self.lista_de_identificadores()
-        self.consume(RELOP)  # '=:' é um RELOP
-        self.tipo()
+    def declaration(self):
+        self.list_identifiers()
+        self.consume(RELOP)  # ':=' é um RELOP
+        self.type_declaration()
 
-    def lista_de_identificadores(self):
+    def list_identifiers(self):
         self.consume(IDENTIFIER)
         while self.lookahead.type == VIRGULA:
             self.consume(VIRGULA)
             self.consume(IDENTIFIER)
 
-    def tipo(self):
+    def type_declaration(self):
         if self.lookahead.type == INTEGER:
             self.consume(INTEGER)
         elif self.lookahead.type == BOOLEAN:
@@ -319,101 +335,104 @@ class SyntaxAnalyzer:
         else:
             self.error("Tipo inválido")
 
-    def comando_composto(self):
+    def compound_command(self):
+        self.handle_comment()
         self.consume(BEGIN)
-        self.comando()
+        self.command()
         while self.lookahead.type == PONTO_VIRG:
             self.consume(PONTO_VIRG)
-            self.comando()
+            self.command()
         self.consume(END)
 
-    def comando(self):
+    def command(self):
+        self.handle_comment() # Valida e trata se for um Comentário
         if self.lookahead.type == IDENTIFIER:
-            self.atribuicao()
+            self.assignment()
         elif self.lookahead.type == READ:
-            self.comando_de_entrada()
+            self.input_command()
         elif self.lookahead.type == WRITE:
-            self.comando_de_saida()
+            self.output_command()
         elif self.lookahead.type == IF:
-            self.comando_if()
+            self.command_if()
         elif self.lookahead.type == WHILE:
-            self.comando_while()
+            self.command_while()
         elif self.lookahead.type == BEGIN:
-            self.comando_composto()
+            self.compound_command()
         else:
             self.error("Comando inválido")
 
-    def atribuicao(self):
+    def assignment(self):
         self.consume(IDENTIFIER)
         self.consume(RELOP)  # ':=' é um RELOP
-        self.expressao()
+        self.expression()
 
-    def comando_if(self):
+    def command_if(self):
         self.consume(IF)
-        self.expressao()
+        self.expression()
         self.consume(THEN)
-        self.comando()
+        self.command()
+        self.handle_comment() # Valida se existe um comentario depois do comando
         if self.lookahead.type == ELSE:
             self.consume(ELSE)
-            self.comando()
+            self.command()
 
-    def comando_while(self):
+    def command_while(self):
         self.consume(WHILE)
-        self.expressao()
+        self.expression()
         self.consume(DO)
-        self.comando()
+        self.command()
 
-    def comando_de_entrada(self):
+    def input_command(self):
         self.consume(READ)
-        self.consume(PARENTESES)
-        self.lista_de_identificadores()
-        self.consume(PARENTESES)
+        self.consume(PARENTHESIS)
+        self.list_identifiers()
+        self.consume(PARENTHESIS)
 
-    def comando_de_saida(self):
+    def output_command(self):
         self.consume(WRITE)
-        self.consume(PARENTESES)
-        self.expressao()
+        self.consume(PARENTHESIS)
+        self.expression()
         while self.lookahead.type == VIRGULA:
             self.consume(VIRGULA)
-            self.expressao()
-        self.consume(PARENTESES)
+            self.expression()
+        self.consume(PARENTHESIS)
 
-    def expressao(self):
-        self.expressao_simples()
+    def expression(self):
+        self.simple_expression()
         if self.lookahead.type == RELOP:
             self.consume(RELOP)
-            self.expressao_simples()
+            self.simple_expression()
 
-    def expressao_simples(self):
+    def simple_expression(self):
         if self.lookahead.type in [SUM, SUB]:
             self.consume(self.lookahead.type)
-        self.termo()
+        self.term()
         while self.lookahead.type in [SUM, SUB, ADDOP]:
             self.consume(self.lookahead.type)
-            self.termo()
+            self.term()
 
-    def termo(self):
-        self.fator()
+    def term(self):
+        self.factor()
         while self.lookahead.type in [MULT, DIV, MOD]:
             self.consume(self.lookahead.type)
-            self.fator()
+            self.factor()
 
-    def fator(self):
+    def factor(self):
         if self.lookahead.type == IDENTIFIER:
             self.consume(IDENTIFIER)
         elif self.lookahead.type in [NUM_INT, NUM_REAL]:
             self.consume(self.lookahead.type)
-        elif self.lookahead.type == PARENTESES and self.lookahead.lexeme == '(':
-            self.consume(PARENTESES)
-            self.expressao()
-            self.consume(PARENTESES)
+        elif self.lookahead.type == PARENTHESIS and self.lookahead.lexeme == '(':
+            self.consume(PARENTHESIS)
+            self.expression()
+            self.consume(PARENTHESIS)
         elif self.lookahead.type == TRUE:
             self.consume(TRUE)
         elif self.lookahead.type == FALSE:
             self.consume(FALSE)
         elif self.lookahead.type == NOT:
             self.consume(NOT)
-            self.fator()
+            self.factor()
         else:
             self.error("Fator inválido")
 
@@ -422,7 +441,7 @@ def read_file():
     if len(sys.argv) > 1:
         file_name = sys.argv[1]
     else:
-        file_name = r'C:\Users\gugsr\OneDrive\Documents\GitHub\compiler\src\files\input02.pas'
+        file_name = 'files/comment_case.pas'
 
     arq = open(file_name)
     buffer = arq.read()
@@ -430,38 +449,15 @@ def read_file():
 
     return buffer
 
-def consume(atomo, lex):
-    while atomo.type not in [EOS, ERROR]:
-        print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]}\t\t lexema: {atomo.lexeme}', end='')
-
-        if atomo.value != 0:
-            print(f'\t\t valor: {atomo.value}')
-        else:
-            print()
-            
-        atomo = lex.next_atom()
-        
-    if atomo.type == ERROR:
-        print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]} Erro na linha {atomo.line}. Caractere inesperado "{lex.buffer[lex.i-1]}"')
-    else:
-        print(f'Linha: {atomo.line} - átomo: {atomo_msg[atomo.type]}. {atomo.line} linhas analisadas, programa sintaticamente correto.')
-
 def main():
     buffer = read_file()
     lex = LexiconAnalyzer(buffer)
-    parser = SyntaxAnalyzer(lex)
+    synthetic = SyntaxAnalyzer(lex)
 
-    print("Análise Léxica e Sintática:")
     try:
-        lex = LexiconAnalyzer(buffer)
-        parser.parse()
-        print("Análise léxica e sintática concluída com sucesso.")
+        synthetic.synthetic()
+        print(f"{synthetic.lex.line} linhas analisadas, análise léxica e sintática concluída com sucesso.")
     except Exception as e:
         print(f"Erro: {str(e)}")
     
-    # Verificar se há algum átomo não processado
-    final_token = lex.next_atom()
-    if final_token.type != EOS:
-        print(f"Aviso: Há tokens não processados após o fim do programa na linha {final_token.line}")
-
 main()
