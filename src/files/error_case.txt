@@ -1,17 +1,16 @@
-program ex01;
-var a, b, c: integer;
+(*
+programa que calcula o fatorial de um numero lido
+*)
+program exemplo1;
+   var fat, num, cont: integer;
 begin
-   a := 10;
-   b := 30;
-   write((a + 3) * 4);
-   while a <> b do
-      write(10 * (2 + 2) / 2 - 10);
-   if a > 10 and b < 30 then
+   read(num)
+   fat := 1
+   cont := 2
+   while cont <= num do
    begin
-      a := a + 1
-   end
-   else
-   begin
-      b := b + 1
-   end
+      fat := fat * num
+      cont := cont + 1
+   end;
+   write(fat) // imprime fatorial calculado
 end.
