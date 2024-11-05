@@ -70,10 +70,6 @@ reserved_words = {'if': IF, 'then': THEN, 'else': ELSE, 'begin': BEGIN, 'end': E
                   'while': WHILE, 'write': WRITE, 'comment':COMMENT, 'ponto_virg':PONTO_VIRG, 
                   'virgula':VIRGULA, 'parenthesis': PARENTHESIS, 'sum': SUM, 'sub': SUB, 'mult': MULT, 'dot': DOT}
 
-tabela_simbolos = {}
-endereco_atual = 0
-contador_rotulo = 0
-
 # Obj. Atomo
 class Atomo(NamedTuple):
     type: int
@@ -269,7 +265,6 @@ class SyntaxAnalyzer:
     def __init__(self, lexicon_analyzer):
         self.lex = lexicon_analyzer
         self.lookahead = None
-        self.semantic = SemanticAnalyzer()
 
     def error(self, message):
         raise Exception(f"Erro sintático na linha {self.lookahead.line}: {message}")
@@ -297,7 +292,6 @@ class SyntaxAnalyzer:
             self.lookahead = self.lex.next_atom()
 
     def program(self):
-        self.semantic.start_program()  # Código inicial do programa
         self.consume(PROGRAM)
         self.consume(IDENTIFIER)
         if self.lookahead.type == PARENTHESIS and self.lookahead.lexeme == '(':
@@ -307,8 +301,6 @@ class SyntaxAnalyzer:
         self.consume(PONTO_VIRG)
         self.block()
         self.consume(DOT)
-        self.semantic.end_program()  # Código final do programa
-        self.semantic.print_output()  # Exibe a saída
 
     def block(self):
         if self.lookahead.type == VAR:
@@ -324,15 +316,9 @@ class SyntaxAnalyzer:
             self.consume(PONTO_VIRG)
 
     def declaration(self):
-        num_vars = 0
-        while self.lookahead.type == IDENTIFIER:
-            num_vars += 1
-            self.consume(IDENTIFIER)
-            if self.lookahead.type == VIRGULA:
-                self.consume(VIRGULA)
+        self.list_identifiers()
         self.consume(RELOP)  # ':=' é um RELOP
         self.type_declaration()
-        self.semantic.add_memory(num_vars)
 
     def list_identifiers(self):
         self.consume(IDENTIFIER)
@@ -373,11 +359,9 @@ class SyntaxAnalyzer:
             self.error("Comando inválido")
 
     def assignment(self):
-        identifier_address = 0  # Placeholder para o endereço de memória da variável
         self.consume(IDENTIFIER)
         self.consume(RELOP)  # ':=' é um RELOP
         self.expression()
-        self.semantic.assign(identifier_address)
 
     def command_if(self):
         self.consume(IF)
@@ -412,17 +396,8 @@ class SyntaxAnalyzer:
     def expression(self):
         self.simple_expression()
         if self.lookahead.type == RELOP:
-            op_type = self.lookahead.type
             self.consume(RELOP)
             self.simple_expression()
-            if op_type == EQ:
-                self.semantic.compare_equal()
-            elif op_type == NE:
-                self.semantic.compare_not_equal()
-            elif op_type == LT:
-                self.semantic.compare_less()
-            elif op_type == GT:
-                self.semantic.compare_greater()
 
     def simple_expression(self):
         if self.lookahead.type in [SUM, SUB]:
@@ -456,80 +431,6 @@ class SyntaxAnalyzer:
             self.factor()
         else:
             self.error("Fator inválido")
-
-class SemanticAnalyzer:
-    def __init__(self):
-        self.output = []
-        self.memory_index = 0
-        self.label_count = 1
-
-    def new_label(self):
-        label = f"L{self.label_count}"
-        self.label_count += 1
-        return label
-
-    def generate_code(self, code):
-        self.output.append(code)
-
-    def add_memory(self, count):
-        self.memory_index += count
-        self.generate_code(f"AMEM {count}")
-
-    def release_memory(self, count):
-        self.generate_code(f"DMEM {count}")
-        self.memory_index -= count
-
-    def start_program(self):
-        self.generate_code("INPP")
-
-    def end_program(self):
-        self.generate_code("PARA")
-
-    def assign(self, var_address):
-        self.generate_code(f"ARMZ {var_address}")
-
-    def load_const(self, value):
-        self.generate_code(f"CRCT {value}")
-
-    def load_var(self, var_address):
-        self.generate_code(f"CRVL {var_address}")
-
-    def add_op(self):
-        self.generate_code("SOMA")
-
-    def sub_op(self):
-        self.generate_code("SUBT")
-
-    def mul_op(self):
-        self.generate_code("MULT")
-
-    def div_op(self):
-        self.generate_code("DIVI")
-
-    def compare_equal(self):
-        self.generate_code("CMIG")
-
-    def compare_not_equal(self):
-        self.generate_code("CMDG")
-
-    def compare_less(self):
-        self.generate_code("CMME")
-
-    def compare_greater(self):
-        self.generate_code("CMMA")
-
-    def jump_if_false(self, label):
-        self.generate_code(f"DSVF {label}")
-
-    def jump(self, label):
-        self.generate_code(f"DSVS {label}")
-
-    def add_label(self, label):
-        self.generate_code(f"{label}: NADA")
-
-    def print_output(self):
-        for line in self.output:
-            print(line)
 
 # le o arquivo
 def read_file():

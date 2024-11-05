@@ -61,9 +61,9 @@ reserved_words = {'if': IF, 'then': THEN, 'else': ELSE, 'begin': BEGIN, 'end': E
                   'while': WHILE, 'write': WRITE, 'comment':COMMENT, 'ponto_virg':PONTO_VIRG, 
                   'virgula':VIRGULA, 'parenthesis': PARENTHESIS, 'sum': SUM, 'sub': SUB, 'mult': MULT, 'dot': DOT}
 
-#tabela_simbolos = {}
-#endereco_atual = 0
-#contador_rotulo = 0
+tabela_simbolos = {}
+endereco_atual = 0
+contador_rotulo = 0
 
 # Obj. Atomo
 class Atomo(NamedTuple):
@@ -331,7 +331,7 @@ class SyntaxAnalyzer:
             var_name = self.lookahead.lexeme
             if var_name in self.var_addresses:
                 var_address = self.var_addresses[var_name]
-                self.semantic.assign(var_address)
+                self.semantic.assign(var_address)  # Esta função deve atualizar corretamente o valor da variável
             else:
                 self.error(f"Variável '{var_name}' não declarada")
             self.consume(IDENTIFIER)
@@ -375,11 +375,12 @@ class SyntaxAnalyzer:
         var_name = self.lookahead.lexeme
         if var_name not in self.var_addresses:
             self.error(f"Variável '{var_name}' não declarada")
-        
+
         self.consume(IDENTIFIER)
         self.consume(RELOP)  # Consome ":="
-        
-        self.expression()  # Avalia a expressão à direita
+
+        # Aqui você deve usar a expressão para armazenar o resultado
+        value_address = self.expression()  # Avalia a expressão à direita
         self.semantic.assign(self.var_addresses[var_name])
 
     def command_if(self):
@@ -393,17 +394,27 @@ class SyntaxAnalyzer:
         if self.lookahead.type == ELSE:
             self.consume(ELSE)  # Consome 'else'
             false_block = lambda: self.command()  # Executa o bloco falso
-        # Gera o código para a estrutura 'if'
+        # Chamada semântica
         self.semantic.generate_if(condition_code, true_block, false_block)
 
     def command_while(self):
         self.consume(WHILE)
+        start_label = self.semantic.new_label()  # início do loop
+        end_label = self.semantic.new_label()    # fim do loop
+        
+        self.semantic.add_label(start_label)  # início no código
+
         # Gera o código para a condição do loop
-        condition_code = self.expression()  # Código para a condição
-        self.consume(DO)
+        self.expression()  # Avalia a expressão condicional
+        self.semantic.jump_if_false(end_label)  # Salta para o final se a condição for falsa
+
+        self.consume(DO) # Consome Do
+        
         # Define o bloco do loop
-        loop_block = lambda: self.command()  # Bloco de repetição
-        self.semantic.generate_while(condition_code, loop_block)
+        self.command()  # Executa o comando dentro do loop
+
+        self.semantic.jump(start_label)  # Salta de volta ao início para reavaliar a condição
+        self.semantic.add_label(end_label)  # Coloca o rótulo de fim do loop
 
     def input_command(self):
         self.semantic.generate_code("LEIT")
@@ -426,20 +437,22 @@ class SyntaxAnalyzer:
     def expression(self):
         self.simple_expression()
         if self.lookahead.type == RELOP:
-            op_type = self.lookahead.type
+            op_type = self.lookahead.operator
             self.consume(RELOP)
             self.simple_expression()
             # Gera instruções de comparação baseadas no operador
-            if op_type == EQ:
-                self.semantic.compare_equal()
+            if op_type == LE:
+                self.semantic.compare_less_equal() # Semântico
             elif op_type == NE:
-                self.semantic.compare_not_equal()
+                self.semantic.compare_not_equal() # Semântico
             elif op_type == LT:
-                self.semantic.compare_less()
-            elif op_type == GE:
-                self.semantic.compare_greater()
-            elif op_type == GT:  # Novo caso para o operador maior que
-                self.semantic.compare_greater_CMEG()
+                self.semantic.compare_less() # Semântico
+            elif op_type == GE: 
+                self.semantic.compare_greater_equal()   # Semântico
+            elif op_type == GT:
+                self.semantic.compare_greater() # Semântico
+            elif op_type == EQ:
+                self.semantic.compare_equal() # Semântico
 
     def simple_expression(self):
         self.term()
@@ -447,27 +460,27 @@ class SyntaxAnalyzer:
             if self.lookahead.type == SUM:
                 self.consume(SUM)
                 self.term()
-                self.semantic.add_op()
+                self.semantic.add_op() # Semântico
             if self.lookahead.type == SUB:
                 self.consume(SUB)
                 self.term()
-                self.semantic.sub_op()
+                self.semantic.sub_op() # Semântico
 
     def term(self):
         self.factor()
         while self.lookahead.type in {MULT, DIV, MOD}:
             if self.lookahead.type == MULT:
                 self.consume(MULT)
-                self.term()
-                self.semantic.mul_op()
+                self.factor()
+                self.semantic.mul_op() # Semântico
             if self.lookahead.type == DIV:
                 self.consume(DIV)
-                self.term()
-                self.semantic.div_op()
+                self.factor()
+                self.semantic.div_op() # Semântico
             if self.lookahead.type == MOD:
                 self.consume(MOD)
-                self.term()
-                self.semantic.mod_op()
+                self.factor()
+                self.semantic.mod_op() # Semântico
 
     def factor(self):
         if self.lookahead.type == IDENTIFIER:
@@ -486,17 +499,21 @@ class SyntaxAnalyzer:
             self.consume(PARENTHESIS)
             self.expression()
             self.consume(PARENTHESIS)
-        elif self.lookahead.type == TRUE:
-            self.semantic.load_const(1)
-            self.consume(TRUE)
-        elif self.lookahead.type == FALSE:
-            self.semantic.load_const(0)
-            self.consume(FALSE)
+        elif self.lookahead.type in [TRUE, FALSE]:
+            self.handle_boolean()
         elif self.lookahead.type == NOT:
             self.consume(NOT)
             self.factor()
         else:
             self.error("Fator inválido")
+
+    def handle_boolean(self):
+        if self.lookahead.type == TRUE:
+            self.semantic.load_const(1)
+            self.consume(TRUE)
+        elif self.lookahead.type == FALSE:
+            self.semantic.load_const(0)
+            self.consume(FALSE)
 
 class SemanticAnalyzer:
     def __init__(self):
@@ -513,100 +530,104 @@ class SemanticAnalyzer:
         self.output.append(code)
 
     def add_memory(self, count):
-        """Aloca memória para variáveis"""
+        #Aloca memória para variáveis
         self.generate_code(f"AMEM {count}")
         self.memory_index += count
 
     def release_memory(self, count):
-        """Libera memória alocada no final"""
+        #Libera memória
         self.generate_code(f"DMEM {count}")
         self.memory_index -= count
 
     def start_program(self):
-        """Inicia o programa"""
+        #Inicia o programa
         self.generate_code("INPP")
 
     def end_program(self):
-        """Finaliza o programa"""
+        #Finaliza o programa
         self.generate_code("PARA")
 
     def assign(self, var_address):
-        """Armazena o valor no endereço de variável"""
+        #Armazena o valor no endereço de variável
         self.generate_code(f"ARMZ {var_address}")
 
     def load_const(self, value):
-        """Carrega uma constante para o topo da pilha"""
+        #Carrega uma constante para o topo da pilha
         self.generate_code(f"CRCT {value}")
 
     def load_var(self, var_address):
-        """Carrega o valor de uma variável para o topo da pilha"""
+        #Carrega o valor de uma variável para o topo da pilh
         self.generate_code(f"CRVL {var_address}")
 
     def add_op(self):
-        """Operação de adição"""
+        # Operação de adição
         self.generate_code("SOMA")
 
     def mod_op(self):
-        """Operação de módulo"""
+        # Operação de módulo
         self.generate_code("MOD")
 
     def sub_op(self):
-        """Operação de subtração"""
+        #Operação de subtração
         self.generate_code("SUBT")
 
     def mul_op(self):
-        """Operação de multiplicação"""
+        # Operação de multiplicação
         self.generate_code("MULT")
 
     def div_op(self):
-        """Operação de divisão"""
+        #Operação de divisão
         self.generate_code("DIVI")
 
     def compare_equal(self):
-        """Comparação de igualdade"""
+        # Comparação de igualdade
         self.generate_code("CMIG")
 
-    def compare_not_equal(self):
-        """Comparação de diferença"""
-        self.generate_code("CMDG")
-
     def compare_less(self):
-        """Comparação de menor"""
+        # Comparação de menor
         self.generate_code("CMME")
 
-    def compare_greater_CMEG(self):
-        """Comparação de maior (novo método)"""
+    def compare_not_equal(self):
+        # Comparação de diferente
+        self.generate_code("CMDG")
+
+    def compare_greater_equal(self):
+        # Comparação de maior igual
+        self.generate_code("CMAG")
+
+    def compare_less_equal(self):
+        #Comparação de menor igual
         self.generate_code("CMEG")
 
     def compare_greater(self):
-        """Comparação de maior"""
+        #Comparação de maior
         self.generate_code("CMMA")
 
     def jump_if_false(self, label):
-        """Desvia se a condição for falsa"""
+        # Desvia se a condição for falsa
         self.generate_code(f"DSVF {label}")
 
     def jump(self, label):
-        """Desvio incondicional"""
+        # Desvio incondicional"""
         self.generate_code(f"DSVS {label}")
 
     def add_label(self, label):
-        """Define um rótulo para desvio"""
+        # desvio
         self.generate_code(f"{label}: NADA")
 
     def write(self):
-        """IMPRIME NA TELA"""
+        # Função write
         self.generate_code("IMPR")
 
     def print_output(self):
-        """Imprime a saída gerada"""
+        #Output no terminal
         for line in self.output:
             print(line)
 
-    # Métodos para construções de controle de fluxo
+    # controle de fluxo
 
     def generate_if(self, condition_code, true_block, false_block=None):
-        """Gera código para uma estrutura if-else"""
+        # estrutura if-else
         label_false = self.new_label()
         label_end = self.new_label()
 
@@ -631,7 +652,7 @@ class SemanticAnalyzer:
             self.add_label(label_end)
 
     def generate_while(self, condition_code, loop_block):
-        """Gera código para uma estrutura while"""
+        # estrutura while
         label_start = self.new_label()
         label_end = self.new_label()
 
@@ -639,16 +660,16 @@ class SemanticAnalyzer:
         self.add_label(label_start)
 
         # Condição de continuidade do loop
-        self.generate_code(condition_code)
+        self.generate_code(condition_code)  # CRVL é chamados aqui
         self.jump_if_false(label_end)
 
         # Bloco de repetição
         loop_block()
 
-        # Volta para o início do loop
+        # início do loop
         self.jump(label_start)
 
-        # Rótulo de fim do loop
+        # fim do loop
         self.add_label(label_end)
 
 # le o arquivo
