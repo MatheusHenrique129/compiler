@@ -61,10 +61,6 @@ reserved_words = {'if': IF, 'then': THEN, 'else': ELSE, 'begin': BEGIN, 'end': E
                   'while': WHILE, 'write': WRITE, 'comment':COMMENT, 'ponto_virg':PONTO_VIRG, 
                   'virgula':VIRGULA, 'parenthesis': PARENTHESIS, 'sum': SUM, 'sub': SUB, 'mult': MULT, 'dot': DOT}
 
-tabela_simbolos = {}
-endereco_atual = 0
-contador_rotulo = 0
-
 # Obj. Atomo
 class Atomo(NamedTuple):
     type: int
@@ -136,7 +132,7 @@ class LexiconAnalyzer:
             elif state == 2:
                 return Atomo(RELOP, '<=', 0, LE, self.line)
             elif state == 3:
-                return Atomo(RELOP, '>=', 0, GE, self.line)  # Corrigido para tratar >= corretamente
+                return Atomo(RELOP, '>=', 0, GE, self.line)
             elif state == 4:
                 return Atomo(RELOP, '<>', 0, NE, self.line)
             elif state == 5:
@@ -293,6 +289,10 @@ class SyntaxAnalyzer:
         self.semantic.start_program()  # Código inicial do programa
         self.consume(PROGRAM)
         self.consume(IDENTIFIER)
+        if self.lookahead.type == PARENTHESIS and self.lookahead.lexeme == '()':
+            self.consume(PARENTHESIS)
+            self.list_identifiers()
+            self.consume(PARENTHESIS)
         self.consume(PONTO_VIRG)
         self.block()
         self.consume(DOT)
@@ -306,6 +306,8 @@ class SyntaxAnalyzer:
 
     def variable_declarations(self):
         self.consume(VAR)
+        self.declaration()
+        self.consume(PONTO_VIRG)
         while self.lookahead.type == IDENTIFIER:
             self.declaration()
             self.consume(PONTO_VIRG)
@@ -348,10 +350,10 @@ class SyntaxAnalyzer:
 
     def compound_command(self):
         self.consume(BEGIN)
-        while self.lookahead.type != END:  # Continue até encontrar o END
+        self.command()
+        while self.lookahead.type == PONTO_VIRG:
+            self.consume(PONTO_VIRG)
             self.command()
-            if self.lookahead.type == PONTO_VIRG:
-                self.consume(PONTO_VIRG)  # Consume the semicolon
         self.consume(END)
 
     def command(self):
@@ -378,40 +380,37 @@ class SyntaxAnalyzer:
 
         self.consume(IDENTIFIER)
         self.consume(RELOP)  # Consome ":="
-
-        # Aqui você deve usar a expressão para armazenar o resultado
-        value_address = self.expression()  # Avalia a expressão à direita
+        self.expression()
         self.semantic.assign(self.var_addresses[var_name])
 
     def command_if(self):
         self.consume(IF)  # Consome 'if'
         condition_code = self.expression()  # Código para a condição
         self.consume(THEN)  # Consome 'then'
+        self.command()
         # Executa o bloco verdadeiro
         true_block = lambda: self.command()
         # Verifica se há um bloco 'else'
         false_block = None
         if self.lookahead.type == ELSE:
-            self.consume(ELSE)  # Consome 'else'
+            self.consume(ELSE)
+            self.command()
             false_block = lambda: self.command()  # Executa o bloco falso
         # Chamada semântica
-        self.semantic.generate_if(condition_code, true_block, false_block)
+        # self.semantic.generate_if(condition_code, true_block, false_block)
 
     def command_while(self):
-        self.consume(WHILE)
         start_label = self.semantic.new_label()  # início do loop
         end_label = self.semantic.new_label()    # fim do loop
-        
-        self.semantic.add_label(start_label)  # início no código
+        self.consume(WHILE)
 
+        self.semantic.add_label(start_label)  # início no código
         # Gera o código para a condição do loop
-        self.expression()  # Avalia a expressão condicional
+        self.expression()
         self.semantic.jump_if_false(end_label)  # Salta para o final se a condição for falsa
 
-        self.consume(DO) # Consome Do
-        
-        # Define o bloco do loop
-        self.command()  # Executa o comando dentro do loop
+        self.consume(DO)
+        self.command()
 
         self.semantic.jump(start_label)  # Salta de volta ao início para reavaliar a condição
         self.semantic.add_label(end_label)  # Coloca o rótulo de fim do loop
@@ -431,8 +430,6 @@ class SyntaxAnalyzer:
             self.consume(VIRGULA)
             self.expression()
         self.consume(PARENTHESIS)
-        if self.lookahead.type == PONTO_VIRG:
-            self.consume(PONTO_VIRG)
 
     def expression(self):
         self.simple_expression()
@@ -455,16 +452,26 @@ class SyntaxAnalyzer:
                 self.semantic.compare_equal() # Semântico
 
     def simple_expression(self):
+        if self.lookahead.type in [SUM, SUB]:
+            if self.lookahead.type == SUM:
+                self.consume(SUM)
+                self.semantic.add_op() # Semântico
+            if self.lookahead.type == SUB:
+                self.consume(SUB)
+                self.semantic.sub_op() # Semântico
         self.term()
-        while self.lookahead.type in {SUM, SUB}:
+        while self.lookahead.type in {SUM, SUB, ADDOP}:
             if self.lookahead.type == SUM:
                 self.consume(SUM)
                 self.term()
                 self.semantic.add_op() # Semântico
-            if self.lookahead.type == SUB:
+            elif self.lookahead.type == SUB:
                 self.consume(SUB)
                 self.term()
                 self.semantic.sub_op() # Semântico
+            else:
+                self.consume(self.lookahead.type)
+                self.term()
 
     def term(self):
         self.factor()
@@ -621,6 +628,7 @@ class SemanticAnalyzer:
 
     def print_output(self):
         #Output no terminal
+        print("\n******************** MEPA ********************\n")
         for line in self.output:
             print(line)
 
@@ -677,7 +685,7 @@ def read_file():
     if len(sys.argv) > 1:
         file_name = sys.argv[1]
     else:
-        file_name = r"C:\Users\gugsr\OneDrive\Documents\GitHub\compiler\src\files\error_case.txt"
+        file_name = "files/semantic_success_case.pas"
 
     arq = open(file_name)
     buffer = arq.read()
