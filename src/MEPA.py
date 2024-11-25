@@ -275,11 +275,11 @@ class SyntaxAnalyzer:
 
     def consume(self, expected_type):
         self.handle_comment() # valida se tem um Comentário antes de consumir o atomo
-        print(f'Linha: {self.lookahead.line} - átomo: {atomo_msg[self.lookahead.type]}\t\t lexema: {self.lookahead.lexeme}', end='')
-        if self.lookahead.value != 0:
-            print(f'\t\t valor: {self.lookahead.value}')
-        else:
-            print()
+        #print(f'Linha: {self.lookahead.line} - átomo: {atomo_msg[self.lookahead.type]}\t\t lexema: {self.lookahead.lexeme}', end='')
+        #if self.lookahead.value != 0:
+        #    print(f'\t\t valor: {self.lookahead.value}')
+        #else:
+        #    print()
         if self.lookahead.type == expected_type:
             self.lookahead = self.lex.next_atom()
             self.handle_comment() # valida se o proximo atomo é um Comentário
@@ -637,9 +637,9 @@ class SemanticAnalyzer:
 
     def print_output(self):
         #Output no terminal
-        print("\n******************** MEPA ********************\n")
-        for line in self.output:
-            print(line)
+        #print("\n******************** MEPA ********************\n")
+        #for line in self.output:
+        print()
 
     # controle de fluxo
 
@@ -689,6 +689,79 @@ class SemanticAnalyzer:
         # fim do loop
         self.add_label(label_end)
 
+class MEPAInterpreter:
+    def __init__(self):
+        self.pilha = []   # Pilha para execução
+        self.memoria = {} # Memória simulada
+        self.codigo = []  # Código MEPA carregado
+        self.ip = 0       # Instruction pointer
+
+    def carregar_codigo(self, codigo):
+        self.codigo = codigo
+
+    def executar(self):
+        while self.ip < len(self.codigo):
+            instrucao = self.codigo[self.ip]
+            self.ip += 1
+            if instrucao.startswith("CRCT"):
+                _, valor = instrucao.split()
+                self.pilha.append(int(valor))
+            elif instrucao.startswith("SOMA"):
+                b = self.pilha.pop()
+                a = self.pilha.pop()
+                self.pilha.append(a + b)
+            elif instrucao.startswith("ARMZ"):
+                _, endereco = instrucao.split()
+                self.memoria[int(endereco)] = self.pilha.pop()
+            elif instrucao.startswith("PARA"):
+                break
+            else:
+                raise Exception(f"Instrução inválida: {instrucao}")
+        print("Execução concluída. Pilha final:", self.pilha)
+
+    def repl():
+        interpreter = MEPAInterpreter()
+        while True:
+            comando = input("> ").strip().upper()
+            if comando.startswith("LOAD"):
+                _, arquivo = comando.split()
+                with open(arquivo, 'r') as f:
+                    codigo = f.readlines()
+                    interpreter.carregar_codigo(codigo)
+                    print("Código carregado.")
+            elif comando == "LIST":
+                for i, linha in enumerate(interpreter.codigo):
+                    print(f"{i + 1}: {linha.strip()}")
+            elif comando == "RUN":
+                interpreter.executar()
+            elif comando == "EXIT":
+                print("Encerrando...")
+                break
+            else:
+                print("Comando inválido.")
+    
+    def debug(self):
+        while self.ip < len(self.codigo):
+            instrucao = self.codigo[self.ip].strip()
+            print(f"Execução: {instrucao}")
+            self.ip += 1
+            self.executar_instrucao(instrucao)
+            print(f"Pilha: {self.pilha}, Memória: {self.memoria}")
+            comando = input("Digite 'NEXT' para continuar ou 'STOP' para encerrar: ").strip().upper()
+            if comando == "STOP":
+                break
+
+    def deletar_linha(self, linha):
+        if linha < 1 or linha > len(self.codigo):
+            print(f"Linha {linha} inexistente.")
+        else:
+            self.codigo.pop(linha - 1)
+            print(f"Linha {linha} removida.")
+
+
+
+
+
 # le o arquivo
 def read_file():
     if len(sys.argv) > 1:
@@ -710,6 +783,15 @@ def main():
     try:
         synthetic.synthetic()
         print(f"{synthetic.lex.line} linhas analisadas, análise léxica e sintática concluída com sucesso.")
+        interpreter = MEPAInterpreter()
+        interpreter.carregar_codigo(synthetic.semantic.output)  # Carrega o código gerado no analisador semântico
+        print("\n--- Código carregado para execução ---")
+        for linha in interpreter.codigo:
+            print(linha)
+        
+        # Executa o código carregado
+        print("\n--- Executando o código ---")
+        interpreter.executar()
     except Exception as e:
         print(f"Erro: {str(e)}")
     
