@@ -703,7 +703,9 @@ class MEPAInterpreter:
         while self.ip < len(self.codigo):
             instrucao = self.codigo[self.ip]
             self.ip += 1
-            if instrucao.startswith("CRCT"):
+            if instrucao.startswith("INPP"):
+                print("programa inciaida")
+            elif instrucao.startswith("CRCT"):
                 _, valor = instrucao.split()
                 self.pilha.append(int(valor))
             elif instrucao.startswith("SOMA"):
@@ -776,23 +778,33 @@ def read_file():
     return buffer
 
 def main():
-    buffer = read_file()
-    lex = LexiconAnalyzer(buffer)
-    synthetic = SyntaxAnalyzer(lex)
+    buffer = read_file()  # Lê o arquivo de entrada
+    lex = LexiconAnalyzer(buffer)  # Inicializa o analisador léxico
+    synthetic = SyntaxAnalyzer(lex)  # Inicializa o analisador sintático
 
     try:
-        synthetic.synthetic()
+        # Etapa de análise léxica e sintática
+        synthetic.synthetic()  
         print(f"{synthetic.lex.line} linhas analisadas, análise léxica e sintática concluída com sucesso.")
+        
+        # Recupera o código gerado pelo analisador semântico
+        codigo_mepa = synthetic.semantic.output
+        
+        # Inicializa o interpretador
         interpreter = MEPAInterpreter()
-        interpreter.carregar_codigo(synthetic.semantic.output)  # Carrega o código gerado no analisador semântico
-        print("\n--- Código carregado para execução ---")
+        interpreter.carregar_codigo(codigo_mepa)  # Carrega o código no interpretador
+        
+        # Mostra o código gerado
+        print("\n--- Código MEPA Gerado ---")
         for linha in interpreter.codigo:
             print(linha)
         
-        # Executa o código carregado
-        print("\n--- Executando o código ---")
+        # Executa o código
+        print("\n--- Iniciando Execução ---")
         interpreter.executar()
+
     except Exception as e:
         print(f"Erro: {str(e)}")
+
     
 main()
