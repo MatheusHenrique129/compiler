@@ -695,116 +695,279 @@ class MEPAInterpreter:
         self.memoria = {} # Memória simulada
         self.codigo = []  # Código MEPA carregado
         self.ip = 0       # Instruction pointer
+        self.arquivo_atual = None  # Nome do arquivo carregado
+        self.codigo_modificado = False 
+        
+    def carregar_codigo(self, codigo,arquivo=None):
+        self.codigo = [linha.strip() for linha in codigo if linha.strip()]  # Remove espaços e linhas vazias
+        self.arquivo_atual = arquivo
+        self.codigo_modificado = False  # Reseta o status de modificação
+        print(f"Código carregado com sucesso de '{arquivo}'." if arquivo else "Código carregado com sucesso.")
 
-    def carregar_codigo(self, codigo):
-        self.codigo = codigo
-
+    def salvar_codigo(self):
+        if not self.arquivo_atual:
+            print("Nenhum arquivo associado. Use LOAD para carregar ou informe o nome ao salvar.")
+            return False
+        try:
+            with open(self.arquivo_atual, 'w') as f:
+                f.write("\n".join(self.codigo))
+            self.codigo_modificado = False
+            print(f"Código salvo com sucesso em '{self.arquivo_atual}'.")
+            return True
+        except Exception as e:
+            print(f"Erro ao salvar o arquivo: {e}")
+            return False
+        
+##INSTRUÇÕES MEPA
     def executar(self):
         while self.ip < len(self.codigo):
             instrucao = self.codigo[self.ip]
             self.ip += 1
             if instrucao.startswith("INPP"):
-                print("programa inciaida")
+                # Inicia o programa principal
+                self.pilha = []  # Limpa a pilha
+                self.memoria = {}  # Limpa a memória
+                print("Programa iniciado (INPP).")
+
+            elif instrucao.startswith("AMEM"):
+                _, m = instrucao.split()
+                # Aloca memória
+                for i in range(int(m)):
+                    self.memoria[len(self.memoria)] = 0  # Inicializa posições com 0
+                print(f"Memória alocada: {m} posições.")
+
+            elif instrucao.startswith("DMEM"):
+                _, m = instrucao.split()
+                # Desaloca memória
+                for i in range(int(m)):
+                    if len(self.memoria) > 0:
+                        self.memoria.pop(len(self.memoria) - 1)
+                print(f"Memória desalocada: {m} posições.")
+
+            elif instrucao.startswith("PARA"):
+                print("Programa finalizado (PARA).")
+                break
+
             elif instrucao.startswith("CRCT"):
                 _, valor = instrucao.split()
                 self.pilha.append(int(valor))
+
+            elif instrucao.startswith("CRVL"):
+                _, endereco = instrucao.split()
+                self.pilha.append(self.memoria[int(endereco)])
+
             elif instrucao.startswith("SOMA"):
                 b = self.pilha.pop()
                 a = self.pilha.pop()
                 self.pilha.append(a + b)
+
+            elif instrucao.startswith("SUBT"):
+                b = self.pilha.pop()
+                a = self.pilha.pop()
+                self.pilha.append(a - b)
+
+            elif instrucao.startswith("MULT"):
+                b = self.pilha.pop()
+                a = self.pilha.pop()
+                self.pilha.append(a * b)
+
+            elif instrucao.startswith("DIVI"):
+                b = self.pilha.pop()
+                a = self.pilha.pop()
+                if b == 0:
+                    raise Exception("Erro: Divisão por zero.")
+                self.pilha.append(a // b)
+                
+            elif instrucao.startswith("INVR"):
+                a = self.pilha.pop()
+                self.pilha.append(-a)
+
             elif instrucao.startswith("ARMZ"):
                 _, endereco = instrucao.split()
                 self.memoria[int(endereco)] = self.pilha.pop()
-            elif instrucao.startswith("PARA"):
-                break
+
+            elif instrucao.startswith("CONJ"):
+                b = self.pilha.pop()
+                a = self.pilha.pop()
+                self.pilha.append(a and b)
+
+            elif instrucao.startswith("DISJ"):
+                b = self.pilha.pop()
+                a = self.pilha.pop()
+                self.pilha.append(a or b)
+            elif instrucao.startswith("CMME"):
+                b = self.pilha.pop()
+                a = self.pilha.pop()
+                self.pilha.append(1 if a < b else 0)
+
+            elif instrucao.startswith("CMMA"):
+                b = self.pilha.pop()
+                a = self.pilha.pop()
+                self.pilha.append(1 if a > b else 0)
+
+            elif instrucao.startswith("CMIG"):
+                b = self.pilha.pop()
+                a = self.pilha.pop()
+                self.pilha.append(1 if a == b else 0)
+
+            elif instrucao.startswith("CMDG"):
+                b = self.pilha.pop()
+                a = self.pilha.pop()
+                self.pilha.append(1 if a != b else 0)
+
+            elif instrucao.startswith("CMEG"):
+                b = self.pilha.pop()
+                a = self.pilha.pop()
+                self.pilha.append(1 if a <= b else 0)
+
+            elif instrucao.startswith("CMAG"):
+                b = self.pilha.pop()
+                a = self.pilha.pop()
+                self.pilha.append(1 if a >= b else 0)
+
+            elif instrucao.startswith("DSVS"):
+                _, endereco = instrucao.split()
+                self.ip = int(endereco) - 1 # Desvio incondicional (subtraímos 1 para alinhar com a lista de código)
+
+            elif instrucao.startswith("DSVF"):
+                _, endereco = instrucao.split()
+                condicao = self.pilha.pop()
+                if condicao == 0:
+                    self.ip = int(endereco) - 1  # Desvio se falso
+
+            elif instrucao.startswith("NADA"):
+                pass
+
+            elif instrucao.startswith("IMPR"):
+                valor = self.pilha.pop()
+                print(f"IMPR: {valor}")
             else:
                 raise Exception(f"Instrução inválida: {instrucao}")
         print("Execução concluída. Pilha final:", self.pilha)
 
-    def repl():
-        interpreter = MEPAInterpreter()
+    def repl(self):
         while True:
             comando = input("> ").strip().upper()
+
             if comando.startswith("LOAD"):
-                _, arquivo = comando.split()
-                with open(arquivo, 'r') as f:
-                    codigo = f.readlines()
-                    interpreter.carregar_codigo(codigo)
-                    print("Código carregado.")
-            elif comando == "LIST":
-                for i, linha in enumerate(interpreter.codigo):
-                    print(f"{i + 1}: {linha.strip()}")
-            elif comando == "RUN":
-                interpreter.executar()
+                if self.codigo_modificado:
+                    salvar = input("Há modificações não salvas. Deseja salvar? (S/N): ").strip().upper()
+                    if salvar == "S":
+                        if not self.salvar_codigo():
+                            continue
+                try:
+                    partes = comando.split(maxsplit=1)
+                    if len(partes) < 2:
+                        print("Erro: O comando LOAD requer o nome do arquivo. Exemplo: LOAD exemplo.mepa")
+                        continue
+                    arquivo = partes[1]
+                    with open(arquivo, 'r') as f:
+                        codigo = f.readlines()
+                        self.carregar_codigo(codigo, arquivo=arquivo)
+                except FileNotFoundError:
+                    print(f"Erro: Arquivo '{arquivo}' não encontrado.")
+                except Exception as e:
+                    print(f"Erro ao carregar o arquivo: {e}")
+
+            elif comando == "LIST": 
+                if not self.codigo:
+                    print("Nenhum código carregado.")
+                else:
+                    print("\n--- Código Carregado ---")
+                    for i, linha in enumerate(self.codigo):
+                        print(f"{i + 1}: {linha.strip()}")
+
+            elif comando == "RUN":  
+                if self.codigo:
+                    print("\n--- Iniciando Execução ---")
+                    self.executar()
+                else:
+                    print("Nenhum código carregado. Use o comando LOAD primeiro.")
+
+            elif comando == "SAVE":
+                if not self.salvar_codigo():
+                    novo_arquivo = input("Informe o nome do arquivo para salvar: ").strip()
+                    try:
+                        with open(novo_arquivo, 'w') as f:
+                            f.write("\n".join(self.codigo))
+                        self.codigo_modificado = False
+                        print(f"Código salvo com sucesso em '{novo_arquivo}'.")
+                    except Exception as e:
+                        print(f"Erro ao salvar o arquivo: {e}")
+
             elif comando == "EXIT":
-                print("Encerrando...")
+                if self.codigo_modificado:
+                    salvar = input("Há modificações não salvas. Deseja salvar? (S/N): ").strip().upper()
+                    if salvar == "S":
+                        if not self.salvar_codigo():
+                            continue
+                print("Encerrando o programa.")
                 break
+
             else:
                 print("Comando inválido.")
     
-    def debug(self):
-        while self.ip < len(self.codigo):
-            instrucao = self.codigo[self.ip].strip()
-            print(f"Execução: {instrucao}")
-            self.ip += 1
-            self.executar_instrucao(instrucao)
-            print(f"Pilha: {self.pilha}, Memória: {self.memoria}")
-            comando = input("Digite 'NEXT' para continuar ou 'STOP' para encerrar: ").strip().upper()
-            if comando == "STOP":
-                break
+    
 
-    def deletar_linha(self, linha):
-        if linha < 1 or linha > len(self.codigo):
-            print(f"Linha {linha} inexistente.")
-        else:
-            self.codigo.pop(linha - 1)
-            print(f"Linha {linha} removida.")
-
-
-
+    # def deletar_linha(self, linha):
+    #     if linha < 1 or linha > len(self.codigo):
+    #         print(f"Linha {linha} inexistente.")
+    #     else:
+    #         self.codigo.pop(linha - 1)
+    #         print(f"Linha {linha} removida.")
 
 
 # le o arquivo
-def read_file():
-    if len(sys.argv) > 1:
-        file_name = sys.argv[1]
-    else:
-        file_name = r"C:\Users\gugsr\OneDrive\Documents\GitHub\compiler\src\files\success_case.pas"
+# def read_file():
+#     if len(sys.argv) > 1:
+#         file_name = sys.argv[1]
+#     else:
+#         file_name = r"C:\Users\gugsr\OneDrive\Documents\GitHub\compiler\src\files\success_case.pas"
 
-    arq = open(file_name)
-    buffer = arq.read()
-    arq.close()
+#     arq = open(file_name)
+#     buffer = arq.read()
+#     arq.close()
 
-    return buffer
+#     return buffer
 
-def main():
-    buffer = read_file()  # Lê o arquivo de entrada
-    lex = LexiconAnalyzer(buffer)  # Inicializa o analisador léxico
-    synthetic = SyntaxAnalyzer(lex)  # Inicializa o analisador sintático
+# def main():
+#     buffer = read_file()  # Lê o arquivo de entrada
+#     lex = LexiconAnalyzer(buffer)  # Inicializa o analisador léxico
+#     synthetic = SyntaxAnalyzer(lex)  # Inicializa o analisador sintático
 
-    try:
-        # Etapa de análise léxica e sintática
-        synthetic.synthetic()  
-        print(f"{synthetic.lex.line} linhas analisadas, análise léxica e sintática concluída com sucesso.")
+#     try:
+#         # Etapa de análise léxica e sintática
+#         synthetic.synthetic()  
+#         print(f"{synthetic.lex.line} linhas analisadas, análise léxica e sintática concluída com sucesso.")
         
-        # Recupera o código gerado pelo analisador semântico
-        codigo_mepa = synthetic.semantic.output
+#         # Recupera o código gerado pelo analisador semântico
+#         codigo_mepa = synthetic.semantic.output
         
-        # Inicializa o interpretador
-        interpreter = MEPAInterpreter()
-        interpreter.carregar_codigo(codigo_mepa)  # Carrega o código no interpretador
+#         # Inicializa o interpretador
+#         interpreter = MEPAInterpreter()
+#         interpreter.carregar_codigo(codigo_mepa)  # Carrega o código no interpretador
         
-        # Mostra o código gerado
-        print("\n--- Código MEPA Gerado ---")
-        for linha in interpreter.codigo:
-            print(linha)
+#         # Mostra o código gerado
+#         print("\n--- Código MEPA Gerado ---")
+#         for linha in interpreter.codigo:
+#             print(linha)
         
-        # Executa o código
-        print("\n--- Iniciando Execução ---")
-        interpreter.executar()
+#         # Executa o código
+#         print("\n--- Iniciando Execução ---")
+#         interpreter.executar()
 
-    except Exception as e:
-        print(f"Erro: {str(e)}")
+#     except Exception as e:
+#         print(f"Erro: {str(e)}")
 
     
-main()
+    
+#main()
+
+if __name__ == "__main__":
+        interpreter = MEPAInterpreter()
+        interpreter.repl()
+
+
+#AJUSTAR PRINTAR 20 POR VEZ
+#ERRO NO COMANDO RUN IndexError: pop from empty list
+#IMPLEMENTAR INS, DEL,DEBUG(STACK, STOP)
