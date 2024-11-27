@@ -873,9 +873,11 @@ class MEPAInterpreter:
                 if not self.codigo:
                     print("Nenhum código carregado.")
                 else:
-                    print("\n--- Código Carregado ---")
-                    for i, linha in enumerate(self.codigo):
-                        print(f"{i + 1}: {linha.strip()}")
+                    for i in range (0, len(self.codigo),20):
+                        for j in range(i, min(i+20,len(self.codigo))):
+                            print(f'{j+1}: {self.codigo [j]}')
+                        if i+20 < len(self.codigo):
+                            input("Pressione Enter para continuar")
 
             elif comando == "RUN":  
                 if self.codigo:
@@ -883,6 +885,21 @@ class MEPAInterpreter:
                     self.executar()
                 else:
                     print("Nenhum código carregado. Use o comando LOAD primeiro.")
+            
+            elif comando.startswith("INS"):
+                partes = comando.split(maxsplit=2)
+                if len(partes) < 3:
+                    print("Erro: O comando INS requer <LINHA> e <INSTRUÇÃO>. Exemplo: INS 30 CRCT 5")
+                    continue
+                try:
+                    linha = int(partes[1])  # Obtém o número da linha
+                    if linha < 0:
+                        print("Erro: A linha não pode ser negativa.")
+                        continue
+                    instrucao = partes[2].strip()  # Obtém a instrução
+                    self.inserir_linha(linha, instrucao)
+                except ValueError:
+                    print("Erro: A linha deve ser um número inteiro válido.")
 
             elif comando == "SAVE":
                 if not self.salvar_codigo():
@@ -907,14 +924,21 @@ class MEPAInterpreter:
             else:
                 print("Comando inválido.")
     
-    
+    def inserir_linha(self, linha, instrucao):
+        # Verifica se a linha já existe
+        for i, codigo in enumerate(self.codigo):
+            num_linha, _ = codigo.split(maxsplit=1)
+            if int(num_linha) == linha:  # Linha já existe
+                self.codigo[i] = f"{linha} {instrucao}"  # Atualiza a instrução
+                self.codigo_modificado = True
+                print(f"Linha {linha} atualizada.")
+                return
 
-    # def deletar_linha(self, linha):
-    #     if linha < 1 or linha > len(self.codigo):
-    #         print(f"Linha {linha} inexistente.")
-    #     else:
-    #         self.codigo.pop(linha - 1)
-    #         print(f"Linha {linha} removida.")
+        # Insere a nova linha na posição correta
+        nova_linha = f"{linha} {instrucao}"
+        self.codigo.append(nova_linha)  # Adiciona ao final temporariamente
+        self.codigo.sort(key=lambda x: int(x.split(maxsplit=1)[0]))  # Ordena por número de linha
+        self.codigo_modificado = True
 
 
 # le o arquivo
@@ -968,6 +992,6 @@ if __name__ == "__main__":
         interpreter.repl()
 
 
-#AJUSTAR PRINTAR 20 POR VEZ
-#ERRO NO COMANDO RUN IndexError: pop from empty list
+#ERRO NO COMANDO RUN
+#AJUSTAR INS
 #IMPLEMENTAR INS, DEL,DEBUG(STACK, STOP)
