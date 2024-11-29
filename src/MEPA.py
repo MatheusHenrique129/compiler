@@ -15,154 +15,8 @@ class MEPAInterpreter:
         self.ip = 0       # Instruction pointer
         self.arquivo_atual = None  # Nome do arquivo carregado
         self.codigo_modificado = False 
-        
-    def carregar_codigo(self, codigo,arquivo=None):
-        self.codigo = [linha.strip() for linha in codigo if linha.strip()]  # Remove espaços e linhas vazias
-        self.arquivo_atual = arquivo
-        self.codigo_modificado = False  # Reseta o status de modificação
-        print(f"Código carregado com sucesso de '{arquivo}'." if arquivo else "Código carregado com sucesso.")
 
-    def salvar_codigo(self):
-        if not self.arquivo_atual:
-            print("Nenhum arquivo associado. Use LOAD para carregar ou informe o nome ao salvar.")
-            return False
-        try:
-            with open(self.arquivo_atual, 'w') as f:
-                f.write("\n".join(self.codigo))
-            self.codigo_modificado = False
-            print(f"Código salvo com sucesso em '{self.arquivo_atual}'.")
-            return True
-        except Exception as e:
-            print(f"Erro ao salvar o arquivo: {e}")
-            return False        
-##INSTRUÇÕES MEPA
-    def executar(self):
-        while self.ip < len(self.codigo):
-            instrucao = self.codigo[self.ip]
-            self.ip += 1
-            if instrucao.startswith("INPP"):
-                # Inicia o programa principal
-                self.pilha = []  # Limpa a pilha
-                self.memoria = {}  # Limpa a memória
-                print("Programa iniciado (INPP).")
-
-            elif instrucao.startswith("AMEM"):
-                _, m = instrucao.split()
-                # Aloca memória
-                for i in range(int(m)):
-                    self.memoria[len(self.memoria)] = 0  # Inicializa posições com 0
-                print(f"Memória alocada: {m} posições.")
-
-            elif instrucao.startswith("DMEM"):
-                _, m = instrucao.split()
-                # Desaloca memória
-                for i in range(int(m)):
-                    if len(self.memoria) > 0:
-                        self.memoria.pop(len(self.memoria) - 1)
-                print(f"Memória desalocada: {m} posições.")
-
-            elif instrucao.startswith("PARA"):
-                print("Programa finalizado (PARA).")
-                break
-
-            elif instrucao.startswith("CRCT"):
-                _, valor = instrucao.split()
-                self.pilha.append(int(valor))
-
-            elif instrucao.startswith("CRVL"):
-                _, endereco = instrucao.split()
-                self.pilha.append(self.memoria[int(endereco)])
-
-            elif instrucao.startswith("SOMA"):
-                b = self.pilha.pop()
-                a = self.pilha.pop()
-                self.pilha.append(a + b)
-
-            elif instrucao.startswith("SUBT"):
-                b = self.pilha.pop()
-                a = self.pilha.pop()
-                self.pilha.append(a - b)
-
-            elif instrucao.startswith("MULT"):
-                b = self.pilha.pop()
-                a = self.pilha.pop()
-                self.pilha.append(a * b)
-
-            elif instrucao.startswith("DIVI"):
-                b = self.pilha.pop()
-                a = self.pilha.pop()
-                if b == 0:
-                    raise Exception("Erro: Divisão por zero.")
-                self.pilha.append(a // b)
-                
-            elif instrucao.startswith("INVR"):
-                a = self.pilha.pop()
-                self.pilha.append(-a)
-
-            elif instrucao.startswith("ARMZ"):
-                _, endereco = instrucao.split()
-                self.memoria[int(endereco)] = self.pilha.pop()
-
-            elif instrucao.startswith("CONJ"):
-                b = self.pilha.pop()
-                a = self.pilha.pop()
-                self.pilha.append(a and b)
-
-            elif instrucao.startswith("DISJ"):
-                b = self.pilha.pop()
-                a = self.pilha.pop()
-                self.pilha.append(a or b)
-            elif instrucao.startswith("CMME"):
-                b = self.pilha.pop()
-                a = self.pilha.pop()
-                self.pilha.append(1 if a < b else 0)
-
-            elif instrucao.startswith("CMMA"):
-                b = self.pilha.pop()
-                a = self.pilha.pop()
-                self.pilha.append(1 if a > b else 0)
-
-            elif instrucao.startswith("CMIG"):
-                b = self.pilha.pop()
-                a = self.pilha.pop()
-                self.pilha.append(1 if a == b else 0)
-
-            elif instrucao.startswith("CMDG"):
-                b = self.pilha.pop()
-                a = self.pilha.pop()
-                self.pilha.append(1 if a != b else 0)
-
-            elif instrucao.startswith("CMEG"):
-                b = self.pilha.pop()
-                a = self.pilha.pop()
-                self.pilha.append(1 if a <= b else 0)
-
-            elif instrucao.startswith("CMAG"):
-                b = self.pilha.pop()
-                a = self.pilha.pop()
-                self.pilha.append(1 if a >= b else 0)
-
-            elif instrucao.startswith("DSVS"):
-                _, endereco = instrucao.split()
-                self.ip = int(endereco) - 1 # Desvio incondicional (subtraímos 1 para alinhar com a lista de código)
-
-            elif instrucao.startswith("DSVF"):
-                _, endereco = instrucao.split()
-                condicao = self.pilha.pop()
-                if condicao == 0:
-                    self.ip = int(endereco) - 1  # Desvio se falso
-
-            elif instrucao.startswith("NADA"):
-                pass
-
-            elif instrucao.startswith("IMPR"):
-                valor = self.pilha.pop()
-                print(f"IMPR: {valor}")
-            else:
-                raise Exception(f"Instrução inválida: {instrucao}")
-        print("Execução concluída. Pilha final:", self.pilha)
-
-#Interatividade REPL
+    #INTERATIVIDADE RELP (LIST/EXIT AQUI)
     def repl(self):
         while True:
             comando = input("> ").strip().upper()
@@ -203,7 +57,7 @@ class MEPAInterpreter:
                     self.executar()
                 else:
                     print("Nenhum código carregado. Use o comando LOAD primeiro.")
-            
+
             elif comando.startswith("INS"):
                 partes = comando.split(maxsplit=2)  # Divide o comando em 3 partes: INS, <LINHA>, <INSTRUÇÃO>
                 if len(partes) < 3:  # Verifica se há pelo menos 3 partes
@@ -230,6 +84,7 @@ class MEPAInterpreter:
                         print(f"Código salvo com sucesso em '{novo_arquivo}'.")
                     except Exception as e:
                         print(f"Erro ao salvar o arquivo: {e}")
+            
             elif comando == "DEBUG":
                 if not self.codigo:
                     print("Nenhum código carregado.")
@@ -248,6 +103,26 @@ class MEPAInterpreter:
             else:
                 print("Comando inválido.")
     
+    #LOAD
+    def carregar_codigo(self, codigo,arquivo=None):
+        self.codigo = [linha.strip() for linha in codigo if linha.strip()]  # Remove espaços e linhas vazias
+        self.arquivo_atual = arquivo
+        self.codigo_modificado = False  # Reseta o status de modificação
+        print(f"Código carregado com sucesso de '{arquivo}'." if arquivo else "Código carregado com sucesso.")
+
+    #RUN 
+    def executar(self):
+        while self.ip < len(self.codigo):
+            instrucao = self.codigo[self.ip]
+            self.ip += 1
+            try:
+                self.executar_instrucao(instrucao)  # Chama o método para executar uma única instrução
+            except Exception as e:
+                print(f"Erro ao executar a instrução: {e}")
+                break
+        print("Execução concluída. Pilha final:", self.pilha)
+
+    #INS
     def inserir_linha(self, linha, instrucao):
         # Verifica se a linha já existe
         int(linha)
@@ -266,27 +141,32 @@ class MEPAInterpreter:
         self.codigo.sort(key=lambda x: int(x.split(maxsplit=1)[0]))  # Ordena por número de linha
         self.codigo_modificado = True
 
+    #SAVE
+    def salvar_codigo(self):
+        if not self.arquivo_atual:
+            print("Nenhum arquivo associado. Use LOAD para carregar ou informe o nome ao salvar.")
+            return False
+        try:
+            with open(self.arquivo_atual, 'w') as f:
+                f.write("\n".join(self.codigo))
+            self.codigo_modificado = False
+            print(f"Código salvo com sucesso em '{self.arquivo_atual}'.")
+            return True
+        except Exception as e:
+            print(f"Erro ao salvar o arquivo: {e}")
+            return False        
+
+    #DEBUG
     def debug(self):
         print("\n--- Modo de Depuração ---")
         while self.ip < len(self.codigo):
-            instrucao = self.codigo[self.ip].strip()  # Instrução atual
+            instrucao = self.codigo[self.ip].strip()
             print(f"\nInstrução: {instrucao}")
-            
-            # Executa a instrução
-            self.ip += 1
-            try:
-                self.executar(instrucao)  # Executa a instrução atual
-            except Exception as e:
-                print(f"Erro ao executar a instrução: {e}")
-                break
+            # Instrução atual
 
-            # Mostra o estado atual da pilha e da memória
-            print(f"Pilha: {self.pilha}")
-            print(f"Memória: {self.memoria}")
-            
             # Aguarda o comando do usuário
             while True:
-                comando = input("Digite 'NEXT' para continuar, 'STOP' para sair, ou 'STACK' para exibir a pilha: ").strip().upper()
+                comando = input("debug> ").strip().upper()
                 if comando == "NEXT":
                     break
                 elif comando == "STOP":
@@ -295,7 +175,142 @@ class MEPAInterpreter:
                 elif comando == "STACK":
                     self.stack()  # Chama o método para exibir a memória e a pilha
                 else:
-                    print("Comando inválido.")
+                    print("Comando inválido.")    
+            
+            # Executa a instrução
+            self.ip += 1
+            try:
+                self.executar_instrucao(instrucao)  # Executa a instrução atual
+            except Exception as e:
+                print(f"Erro ao executar a instrução: {e}")
+                break
+
+            # Mostra o estado atual da pilha e da memória
+
+    #NEXT/STOP
+    def executar_instrucao(self, instrucao):
+        instrucao = instrucao.strip()
+        if instrucao.startswith("INPP"):
+            self.pilha = []  # Limpa a pilha
+            self.memoria = {}  # Limpa a memória
+            print("Programa iniciado (INPP).")
+
+        elif instrucao.startswith("AMEM"):
+            _, m = instrucao.split()
+            for i in range(int(m)):
+                self.memoria[len(self.memoria)] = 0
+            print(f"Memória alocada: {m} posições.")
+
+        elif instrucao.startswith("DMEM"):
+            _, m = instrucao.split()
+            for i in range(int(m)):
+                if len(self.memoria) > 0:
+                    self.memoria.pop(len(self.memoria) - 1)
+            print(f"Memória desalocada: {m} posições.")
+
+        elif instrucao.startswith("PARA"):
+            print("Programa finalizado (PARA).")
+            self.ip = len(self.codigo)  # Termina a execução
+
+        elif instrucao.startswith("CRCT"):
+            _, valor = instrucao.split()
+            self.pilha.append(int(valor))
+
+        elif instrucao.startswith("CRVL"):
+            _, endereco = instrucao.split()
+            self.pilha.append(self.memoria[int(endereco)])
+
+        elif instrucao.startswith("SOMA"):
+            b = self.pilha.pop()
+            a = self.pilha.pop()
+            self.pilha.append(a + b)
+
+        elif instrucao.startswith("SUBT"):
+            b = self.pilha.pop()
+            a = self.pilha.pop()
+            self.pilha.append(a - b)
+
+        elif instrucao.startswith("MULT"):
+            b = self.pilha.pop()
+            a = self.pilha.pop()
+            self.pilha.append(a * b)
+
+        elif instrucao.startswith("DIVI"):
+            b = self.pilha.pop()
+            a = self.pilha.pop()
+            if b == 0:
+                raise Exception("Erro: Divisão por zero.")
+            self.pilha.append(a // b)
+
+        elif instrucao.startswith("INVR"):
+            a = self.pilha.pop()
+            self.pilha.append(-a)
+
+        elif instrucao.startswith("ARMZ"):
+            _, endereco = instrucao.split()
+            self.memoria[int(endereco)] = self.pilha.pop()
+
+        elif instrucao.startswith("CONJ"):
+            b = self.pilha.pop()
+            a = self.pilha.pop()
+            self.pilha.append(a and b)
+
+        elif instrucao.startswith("DISJ"):
+            b = self.pilha.pop()
+            a = self.pilha.pop()
+            self.pilha.append(a or b)
+
+        elif instrucao.startswith("CMME"):
+            b = self.pilha.pop()
+            a = self.pilha.pop()
+            self.pilha.append(1 if a < b else 0)
+
+        elif instrucao.startswith("CMMA"):
+            b = self.pilha.pop()
+            a = self.pilha.pop()
+            self.pilha.append(1 if a > b else 0)
+
+        elif instrucao.startswith("CMIG"):
+            b = self.pilha.pop()
+            a = self.pilha.pop()
+            self.pilha.append(1 if a == b else 0)
+
+        elif instrucao.startswith("CMDG"):
+            b = self.pilha.pop()
+            a = self.pilha.pop()
+            self.pilha.append(1 if a != b else 0)
+
+        elif instrucao.startswith("CMEG"):
+            b = self.pilha.pop()
+            a = self.pilha.pop()
+            self.pilha.append(1 if a <= b else 0)
+
+        elif instrucao.startswith("CMAG"):
+            b = self.pilha.pop()
+            a = self.pilha.pop()
+            self.pilha.append(1 if a >= b else 0)
+
+        elif instrucao.startswith("DSVS"):
+            _, endereco = instrucao.split()
+            self.ip = int(endereco) - 1
+
+        elif instrucao.startswith("DSVF"):
+            _, endereco = instrucao.split()
+            condicao = self.pilha.pop()
+            if condicao == 0:
+                self.ip = int(endereco) - 1
+
+        elif instrucao.startswith("NADA"):
+            pass
+
+        elif instrucao.startswith("IMPR"):
+            valor = self.pilha.pop()
+            print(f"IMPR: {valor}")
+
+        else:
+            raise Exception(f"Instrução inválida: {instrucao}")
+
+    #STACK
     def stack(self):
         if not self.pilha:  # Verifica se a pilha está vazia
             print("A pilha está vazia.")
@@ -317,5 +332,5 @@ if __name__ == "__main__":
         interpreter.repl()
 
 #C:\Users\gugsr\OneDrive\Documents\GitHub\compiler\src\files\teste.mepa
-#AJUSTAR INS,(erro de type???), DEBUG (STACK,NEXT, STOP)
+#AJUSTAR INS (erro de type???)
 #IMPLEMENTAR DEL
