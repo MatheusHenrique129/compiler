@@ -60,26 +60,26 @@ class MEPAInterpreter:
 
             elif comando.startswith("INS"):
                 partes = comando.split(maxsplit=2)  # Divide o comando em 3 partes: INS, <LINHA>, <INSTRUÇÃO>
-                if len(partes) < 3:  # Verifica se há pelo menos 3 partes
+                if len(partes) < 3: 
                     print("Erro: O comando INS requer <LINHA> e <INSTRUÇÃO>. Exemplo: INS 30 CRCT 5")
                     continue     
                 try:
                     linha = int(partes[1].strip())  # Remove espaços extras antes de converter
-                    if linha < 0: # Verifica se a linha é negativa
+                    if linha < 0: 
                         print("Erro: A linha não pode ser negativa.")
                         continue
-                    instrucao = partes[2].strip()  # Remove espaços extras na instrução
-                    self.inserir_linha(linha, instrucao)  # Chama o método para inserir ou atualizar a linha
+                    instrucao = partes[2].strip()  
+                    self.inserir_linha(linha, instrucao)  # Chama o método para inserir linha
                 except ValueError:
                     print(f"Erro ao converter linha para inteiro: '{partes[1]}'")
                     print("Erro: A linha deve ser um número inteiro válido.")
 
             elif comando.startswith("DEL"):
-                partes = comando.split(maxsplit=2)  # Divide o comando em 3 partes: INS, <LINHA>, <INSTRUÇÃO>
+                partes = comando.split(maxsplit=2)  # Divide o comando em 3 partes: DEL, <LINHA>
                 if len(partes) == 2:  # DEL <LINHA>
                     try:
                         linha = int(partes[1])
-                        print("LINHAAA", linha)
+                        print("LINHA", linha)
                         self.del_linha(linha)
                     except ValueError:
                         print("Erro: A linha deve ser um número inteiro válido.")
@@ -103,7 +103,6 @@ class MEPAInterpreter:
                         print(f"Erro ao salvar o arquivo: {e}")
             
             elif comando == "DEBUG":
-                print(self.codigo)
                 if not self.codigo:
                     print("Nenhum código carregado.")
                 else:
@@ -121,6 +120,46 @@ class MEPAInterpreter:
 
             else:
                 print("Comando inválido.")
+
+    #LOAD
+    def carregar_codigo(self, codigo,arquivo=None):
+        self.codigo = [linha.strip() for linha in codigo if linha.strip()]  
+        self.arquivo_atual = arquivo
+        self.codigo_modificado = False  # Reseta o status de modificação
+        print(f"Código carregado com sucesso de '{arquivo}'." if arquivo else "Código carregado com sucesso.")
+
+    #RUN 
+    def executar(self):
+        self.ip=0
+        if not self.codigo:  # Verifica se há código carregado
+            print("Nenhum código carregado. Use o comando 'LOAD <FILE_PATH>' primeiro.")
+            return
+
+        while self.ip < len(self.codigo):
+            instrucao = self.codigo[self.ip]
+            self.ip += 1
+            try:
+                self.executar_instrucao(instrucao)  # Chama o método para executar uma única instrução
+            except Exception as e:
+                print(f"Erro ao executar a instrução: {e}")
+                break
+        print("Execução concluída. Pilha final:", self.pilha)
+
+    #INS
+    def inserir_linha(self, linha, instrucao):
+        if linha < 0:
+            print("Erro: A linha não pode ser negativa.")
+            return
+        
+        if linha <= len(self.codigo):# Desloca as instruções a partir da linha desejada para a próxima linha
+            self.codigo.insert(linha - 1, instrucao)  # Insere a instrução na posição especificada
+            self.codigo_modificado = True
+            print(f"Instrução inserida na linha {linha}.")
+        else:
+            # Se a linha for maior que o número de linhas existentes, apenas adiciona a nova instrução
+            self.codigo.append(instrucao)
+            self.codigo_modificado = True
+            print(f"Instrução inserida na última linha ({len(self.codigo)}).")
 
     # DEL <LINHA>
     def del_linha(self, linha):
@@ -143,51 +182,6 @@ class MEPAInterpreter:
         self.codigo_modificado = True
         print(f"Linhas removidas: {linha_i} a {linha_f}: Instruções removidas: {linhas_removidas}")
 
-    #LOAD
-    def carregar_codigo(self, codigo,arquivo=None):
-        self.codigo = [linha.strip() for linha in codigo if linha.strip()]  # Remove espaços e linhas vazias
-        self.arquivo_atual = arquivo
-        self.codigo_modificado = False  # Reseta o status de modificação
-        print(f"Código carregado com sucesso de '{arquivo}'." if arquivo else "Código carregado com sucesso.")
-
-    #RUN 
-    def executar(self):
-        if not self.codigo:  # Verifica se há código carregado
-            print("Nenhum código carregado. Use o comando 'LOAD <FILE_PATH>' primeiro.")
-            return
-           
-        while self.ip < len(self.codigo):
-            instrucao = self.codigo[self.ip]
-            self.ip += 1
-            try:
-                self.executar_instrucao(instrucao)  # Chama o método para executar uma única instrução
-            except Exception as e:
-                print(f"Erro ao executar a instrução: {e}")
-                break
-        print("Execução concluída. Pilha final:", self.pilha)
-
-    #INS
-    def inserir_linha(self, linha, instrucao):
-        # Verifica se a linha é negativa
-        if linha < 0:
-            print("Erro: A linha não pode ser negativa.")
-            return
-        
-        # Verifica se a linha já existe
-        for i, _ in enumerate(self.codigo):
-            num_linha = i+1
-            if int(num_linha) == linha:  # Linha já existe
-                self.codigo[i] = f"{instrucao}"  # Atualiza a instrução
-                self.codigo_modificado = True
-                print(f"Linha {linha} atualizada.")
-                return
-
-        # Insere a nova linha na posição correta
-        self.codigo.append(instrucao)  # Adiciona ao final
-        self.codigo_modificado = True
-        print(f"Linha {linha} inserida.")
-        return
-
     #SAVE
     def salvar_codigo(self):
         if not self.arquivo_atual:
@@ -205,13 +199,13 @@ class MEPAInterpreter:
 
     #DEBUG
     def debug(self):
+        self.ip = 0
         print("\n--- Modo de Depuração ---")
         while self.ip < len(self.codigo):
             instrucao = self.codigo[self.ip].strip()
             print(f"\nInstrução: {instrucao}")
             # Instrução atual
 
-            # Aguarda o comando do usuário
             while True:
                 comando = input("debug> ").strip().upper()
                 if comando == "NEXT":
@@ -221,24 +215,19 @@ class MEPAInterpreter:
                     return
                 elif comando == "STACK":
                     self.stack()  # Chama o método para exibir a memória e a pilha
-                elif comando in ["LOAD", "RUN", "INS", "DEL", "EXIT"]:
-                    print(f"Comando '{comando}' informado, modo de depuração finalizado!")
-                    return
                 else:
                     print("Comando inválido.")    
             
             # Executa a instrução
             self.ip += 1
             try:
-                self.executar_instrucao(instrucao)  # Executa a instrução atual
-                print("Modo de depuração encerrado devido à instrução (PARA).")
+                self.executar_instrucao(instrucao)  
             except Exception as e:
                 print(f"Erro ao executar a instrução: {e}")
                 break
 
-            # Mostra o estado atual da pilha e da memória
 
-    #NEXT/STOP
+    #NEXT/STOP DEBUG (tratamento dos comandos MEPA)
     def executar_instrucao(self, instrucao):
         instrucao = instrucao.strip()
         if instrucao.startswith("INPP"):
@@ -254,7 +243,7 @@ class MEPAInterpreter:
 
         elif instrucao.startswith("DMEM"):
             _, m = instrucao.split()
-            for i in range(int(m)):
+            for m in range(int(m)):
                 if len(self.memoria) > 0:
                     self.memoria.pop(len(self.memoria) - 1)
             print(f"Memória desalocada: {m} posições.")

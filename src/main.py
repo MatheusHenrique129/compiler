@@ -694,7 +694,7 @@ def read_file():
     if len(sys.argv) > 1:
         file_name = sys.argv[1]
     else:
-        file_name = r"C:\Users\gugsr\OneDrive\Documents\GitHub\compiler\src\files\success_case.pas"
+        file_name = r"C:\Users\gugsr\Documents\GitHub\compiler\src\files\semantic_success_case.pas"
 
     arq = open(file_name)
     buffer = arq.read()
