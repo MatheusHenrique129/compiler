@@ -65,7 +65,7 @@ class MEPAInterpreter:
                     continue     
                 try:
                     linha = int(partes[1].strip())  # Remove espaços extras antes de converter
-                    if linha < 0:
+                    if linha < 0: # Verifica se a linha é negativa
                         print("Erro: A linha não pode ser negativa.")
                         continue
                     instrucao = partes[2].strip()  # Remove espaços extras na instrução
@@ -73,6 +73,23 @@ class MEPAInterpreter:
                 except ValueError:
                     print(f"Erro ao converter linha para inteiro: '{partes[1]}'")
                     print("Erro: A linha deve ser um número inteiro válido.")
+
+            elif comando.startswith("DEL"):
+                partes = comando.split(maxsplit=2)  # Divide o comando em 3 partes: INS, <LINHA>, <INSTRUÇÃO>
+                if len(partes) == 2:  # DEL <LINHA>
+                    try:
+                        linha = int(partes[1])
+                        print("LINHAAA", linha)
+                        self.del_linha(linha)
+                    except ValueError:
+                        print("Erro: A linha deve ser um número inteiro válido.")
+                elif len(partes) == 3:  # DEL <LINHA_I> <LINHA_F>
+                    try:
+                        linha_i = int(partes[1])
+                        linha_f = int(partes[2])
+                        self.del_intervalo(linha_i, linha_f)
+                    except ValueError:
+                        print("Erro: As linhas devem ser números inteiros válidos.")
 
             elif comando == "SAVE":
                 if not self.salvar_codigo():
@@ -86,6 +103,7 @@ class MEPAInterpreter:
                         print(f"Erro ao salvar o arquivo: {e}")
             
             elif comando == "DEBUG":
+                print(self.codigo)
                 if not self.codigo:
                     print("Nenhum código carregado.")
                 else:
@@ -96,13 +114,35 @@ class MEPAInterpreter:
                     salvar = input("Há modificações não salvas. Deseja salvar? (S/N): ").strip().upper()
                     if salvar == "S":
                         if not self.salvar_codigo():
+                            print("Erro ao salvar o código. O programa será encerrado sem salvar.")
                             continue
                 print("Encerrando o programa.")
                 break
 
             else:
                 print("Comando inválido.")
-    
+
+    # DEL <LINHA>
+    def del_linha(self, linha):
+        if linha < 1 or linha > len(self.codigo):  # Verifica se a linha está fora do intervalo
+            print(f"Erro: Linha {linha} inexistente.")
+            return
+        
+        linha_removida = self.codigo.pop(linha-1) # Remove a linha 
+        self.codigo_modificado = True
+        print(f"Linha {linha} com a Instrução: {linha_removida} foi removida.") # Exibe a instrução removida
+
+    # DEL <LINHA_I> <LINHA_F>
+    def del_intervalo(self, linha_i, linha_f):
+        if linha_i < 1 or linha_f < 1 or linha_i > len(self.codigo) or linha_f > len(self.codigo) or linha_i > linha_f:
+            print("Erro: Intervalo inválido.")
+            return
+        
+        linhas_removidas = self.codigo[linha_i - 1:linha_f]  # Ajusta para índice 0
+        del self.codigo[linha_i - 1:linha_f]  # Remove as linhas do intervalo
+        self.codigo_modificado = True
+        print(f"Linhas removidas: {linha_i} a {linha_f}: Instruções removidas: {linhas_removidas}")
+
     #LOAD
     def carregar_codigo(self, codigo,arquivo=None):
         self.codigo = [linha.strip() for linha in codigo if linha.strip()]  # Remove espaços e linhas vazias
@@ -112,6 +152,10 @@ class MEPAInterpreter:
 
     #RUN 
     def executar(self):
+        if not self.codigo:  # Verifica se há código carregado
+            print("Nenhum código carregado. Use o comando 'LOAD <FILE_PATH>' primeiro.")
+            return
+           
         while self.ip < len(self.codigo):
             instrucao = self.codigo[self.ip]
             self.ip += 1
@@ -124,22 +168,25 @@ class MEPAInterpreter:
 
     #INS
     def inserir_linha(self, linha, instrucao):
+        # Verifica se a linha é negativa
+        if linha < 0:
+            print("Erro: A linha não pode ser negativa.")
+            return
+        
         # Verifica se a linha já existe
-        int(linha)
-        print(type(linha))
-        for i, codigo in enumerate(self.codigo):
-            num_linha, _ = codigo.split(maxsplit=1)
+        for i, _ in enumerate(self.codigo):
+            num_linha = i+1
             if int(num_linha) == linha:  # Linha já existe
-                self.codigo[i] = f"{linha} {instrucao}"  # Atualiza a instrução
+                self.codigo[i] = f"{instrucao}"  # Atualiza a instrução
                 self.codigo_modificado = True
                 print(f"Linha {linha} atualizada.")
                 return
 
         # Insere a nova linha na posição correta
-        nova_linha = f"{linha} {instrucao}"
-        self.codigo.append(nova_linha)  # Adiciona ao final temporariamente
-        self.codigo.sort(key=lambda x: int(x.split(maxsplit=1)[0]))  # Ordena por número de linha
+        self.codigo.append(instrucao)  # Adiciona ao final
         self.codigo_modificado = True
+        print(f"Linha {linha} inserida.")
+        return
 
     #SAVE
     def salvar_codigo(self):
@@ -174,6 +221,9 @@ class MEPAInterpreter:
                     return
                 elif comando == "STACK":
                     self.stack()  # Chama o método para exibir a memória e a pilha
+                elif comando in ["LOAD", "RUN", "INS", "DEL", "EXIT"]:
+                    print(f"Comando '{comando}' informado, modo de depuração finalizado!")
+                    return
                 else:
                     print("Comando inválido.")    
             
@@ -181,6 +231,7 @@ class MEPAInterpreter:
             self.ip += 1
             try:
                 self.executar_instrucao(instrucao)  # Executa a instrução atual
+                print("Modo de depuração encerrado devido à instrução (PARA).")
             except Exception as e:
                 print(f"Erro ao executar a instrução: {e}")
                 break
@@ -330,7 +381,3 @@ class MEPAInterpreter:
 if __name__ == "__main__":
         interpreter = MEPAInterpreter()
         interpreter.repl()
-
-#C:\Users\gugsr\OneDrive\Documents\GitHub\compiler\src\files\teste.mepa
-#AJUSTAR INS (erro de type???)
-#IMPLEMENTAR DEL
