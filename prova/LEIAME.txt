@@ -1,0 +1,64 @@
+# MEPA Interpreter
+
+################################################################################
+# PROVA FINAL - Prof: Leonardo Massayuki Takuno                                #
+#                                                                              #
+# Bruna Tiemi Tarumoto Watanabe - 1904272                                      #
+# Gustavo Goes Sant'Ana - 2201501                                              #
+# Kaiky Amorim dos Santos - 2200387                                            #
+# Matheus Henrique Santos da Silva - 2200973                                   #
+################################################################################
+
+## Descrição
+
+O MEPA Interpreter é um interpretador para a linguagem de programação MEPA, desenvolvido como parte de um projeto acadêmico. O interpretador permite a execução de códigos escritos na linguagem MEPA, oferecendo funcionalidades como carregamento de arquivos, execução de instruções, depuração e manipulação de código.
+
+## Funcionalidades
+
+- **Carregar Código**: Carrega um arquivo de código MEPA para execução.
+- **Executar Código**: Executa o código carregado linha por linha.
+- **Depuração**: Modo de depuração que permite a execução passo a passo do código.
+- **Inserir e Deletar Linhas**: Permite a inserção e remoção de linhas de código.
+- **Salvar Código**: Salva o código modificado em um arquivo.
+- **Visualizar Pilha e Memória**: Exibe o estado atual da pilha e da memória durante a execução.
+
+## Comandos
+
+Os seguintes comandos estão disponíveis no interpretador:
+
+- `LOAD <arquivo>`: Carrega um arquivo de código MEPA.
+- `LIST`: Lista o código carregado.
+- `RUN`: Executa o código carregado.
+- `INS <linha> <instrução>`: Insere uma instrução na linha especificada.
+- `DEL <linha>`: Remove a linha especificada.
+- `DEL <linha_i> <linha_f>`: Remove um intervalo de linhas.
+- `SAVE`: Salva o código atual em um arquivo.
+- `DEBUG`: Inicia o modo de depuração, com suas Opções de Navegações `NEXT`, `STOP` e `STACK`.
+- `EXIT`: Encerra o interpretador.
+
+## Instalação
+
+Para executar o MEPA Interpreter, siga os passos abaixo:
+
+1. Clone o repositório:
+
+   ```bash
+   git clone <URL do repositório>
+   cd <diretório do repositório>
+   ```
+
+2. Execute o interpretador:
+   ```bash
+   python MEPA.py
+   ```
+
+## Uso
+
+Após iniciar o interpretador, você pode usar os comandos listados acima para interagir com o código MEPA. Para obter ajuda sobre um comando específico, consulte a documentação ou o código-fonte.
+
+## Vídeo de Apresentação
+
+Gravamos um vídeo explicando o código fonte e demonstrando o funcionamento do programa. Todos os integrantes do grupo apresentaram uma parte do trabalho. O vídeo está disponível no YouTube como privado.
+
+**Link do vídeo**: https://youtu.be/Jm_bB_2mY8I
+
