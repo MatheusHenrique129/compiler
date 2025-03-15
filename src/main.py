@@ -141,8 +141,10 @@ class LexiconAnalyzer:
             elif state == 2:
                 return Atomo(RELOP, '<=', 0, LE, self.line)
             elif state == 3:
-                return Atomo(RELOP, '<>', 0, NE, self.line)
+                return Atomo(RELOP, '>=', 0, GE, self.line)
             elif state == 4:
+                return Atomo(RELOP, '<>', 0, NE, self.line)
+            elif state == 5:
                 self.prev_char()
                 return Atomo(RELOP, '<', 0, LT, self.line)
 
@@ -265,6 +267,8 @@ class SyntaxAnalyzer:
     def __init__(self, lexicon_analyzer):
         self.lex = lexicon_analyzer
         self.lookahead = None
+        self.semantic = SemanticAnalyzer()  # Inicializa o analisador semântico
+        self.var_addresses = {}
 
     def error(self, message):
         raise Exception(f"Erro sintático na linha {self.lookahead.line}: {message}")
@@ -276,7 +280,6 @@ class SyntaxAnalyzer:
             print(f'\t\t valor: {self.lookahead.value}')
         else:
             print()
-
         if self.lookahead.type == expected_type:
             self.lookahead = self.lex.next_atom()
             self.handle_comment() # valida se o proximo atomo é um Comentário
@@ -292,15 +295,18 @@ class SyntaxAnalyzer:
             self.lookahead = self.lex.next_atom()
 
     def program(self):
+        self.semantic.start_program()  # Código inicial do programa
         self.consume(PROGRAM)
         self.consume(IDENTIFIER)
-        if self.lookahead.type == PARENTHESIS and self.lookahead.lexeme == '(':
+        if self.lookahead.type == PARENTHESIS and self.lookahead.lexeme == '()':
             self.consume(PARENTHESIS)
             self.list_identifiers()
             self.consume(PARENTHESIS)
         self.consume(PONTO_VIRG)
         self.block()
         self.consume(DOT)
+        self.semantic.end_program()  # Código final do programa
+        self.semantic.print_output()
 
     def block(self):
         if self.lookahead.type == VAR:
@@ -316,15 +322,32 @@ class SyntaxAnalyzer:
             self.consume(PONTO_VIRG)
 
     def declaration(self):
-        self.list_identifiers()
-        self.consume(RELOP)  # ':=' é um RELOP
+        var_list = []
+        while self.lookahead.type == IDENTIFIER:
+            var_name = self.lookahead.lexeme
+            self.consume(IDENTIFIER)
+            var_list.append(var_name)
+            if self.lookahead.type == VIRGULA:
+                self.consume(VIRGULA)
+        self.consume(RELOP)  # Consome o ":"
         self.type_declaration()
+        for var_name in var_list:
+            self.var_addresses[var_name] = self.semantic.memory_index
+            self.semantic.memory_index += 1
+        self.semantic.add_memory(len(var_list))
 
     def list_identifiers(self):
-        self.consume(IDENTIFIER)
-        while self.lookahead.type == VIRGULA:
-            self.consume(VIRGULA)
+        """Carrega variáveis de entrada"""
+        while self.lookahead.type == IDENTIFIER:
+            var_name = self.lookahead.lexeme
+            if var_name in self.var_addresses:
+                var_address = self.var_addresses[var_name]
+                self.semantic.assign(var_address)  # Esta função deve atualizar corretamente o valor da variável
+            else:
+                self.error(f"Variável '{var_name}' não declarada")
             self.consume(IDENTIFIER)
+            if self.lookahead.type == VIRGULA:
+                self.consume(VIRGULA)
 
     def type_declaration(self):
         if self.lookahead.type == INTEGER:
@@ -349,6 +372,7 @@ class SyntaxAnalyzer:
             self.input_command()
         elif self.lookahead.type == WRITE:
             self.output_command()
+            self.semantic.write()
         elif self.lookahead.type == IF:
             self.command_if()
         elif self.lookahead.type == WHILE:
@@ -359,26 +383,49 @@ class SyntaxAnalyzer:
             self.error("Comando inválido")
 
     def assignment(self):
+        var_name = self.lookahead.lexeme
+        if var_name not in self.var_addresses:
+            self.error(f"Variável '{var_name}' não declarada")
+
         self.consume(IDENTIFIER)
-        self.consume(RELOP)  # ':=' é um RELOP
+        self.consume(RELOP)  # Consome ":="
         self.expression()
+        self.semantic.assign(self.var_addresses[var_name])
 
     def command_if(self):
-        self.consume(IF)
-        self.expression()
-        self.consume(THEN)
+        self.consume(IF)  # Consome 'if'
+        condition_code = self.expression()  # Código para a condição
+        self.consume(THEN)  # Consome 'then'
         self.command()
+        # Executa o bloco verdadeiro
+        true_block = lambda: self.command()
+        # Verifica se há um bloco 'else'
+        false_block = None
         if self.lookahead.type == ELSE:
             self.consume(ELSE)
             self.command()
+            false_block = lambda: self.command()  # Executa o bloco falso
+        # Chamada semântica
+        # self.semantic.generate_if(condition_code, true_block, false_block)
 
     def command_while(self):
+        start_label = self.semantic.new_label()  # início do loop
+        end_label = self.semantic.new_label()    # fim do loop
         self.consume(WHILE)
+
+        self.semantic.add_label(start_label)  # início no código
+        # Gera o código para a condição do loop
         self.expression()
+        self.semantic.jump_if_false(end_label)  # Salta para o final se a condição for falsa
+
         self.consume(DO)
         self.command()
 
+        self.semantic.jump(start_label)  # Salta de volta ao início para reavaliar a condição
+        self.semantic.add_label(end_label)  # Coloca o rótulo de fim do loop
+
     def input_command(self):
+        self.semantic.generate_code("LEIT")
         self.consume(READ)
         self.consume(PARENTHESIS)
         self.list_identifiers()
@@ -396,48 +443,258 @@ class SyntaxAnalyzer:
     def expression(self):
         self.simple_expression()
         if self.lookahead.type == RELOP:
+            op_type = self.lookahead.operator
             self.consume(RELOP)
             self.simple_expression()
+            # Gera instruções de comparação baseadas no operador
+            if op_type == LE:
+                self.semantic.compare_less_equal() # Semântico
+            elif op_type == NE:
+                self.semantic.compare_not_equal() # Semântico
+            elif op_type == LT:
+                self.semantic.compare_less() # Semântico
+            elif op_type == GE: 
+                self.semantic.compare_greater_equal()   # Semântico
+            elif op_type == GT:
+                self.semantic.compare_greater() # Semântico
+            elif op_type == EQ:
+                self.semantic.compare_equal() # Semântico
 
     def simple_expression(self):
         if self.lookahead.type in [SUM, SUB]:
-            self.consume(self.lookahead.type)
+            if self.lookahead.type == SUM:
+                self.consume(SUM)
+                self.semantic.add_op() # Semântico
+            if self.lookahead.type == SUB:
+                self.consume(SUB)
+                self.semantic.sub_op() # Semântico
         self.term()
-        while self.lookahead.type in [SUM, SUB, ADDOP]:
-            self.consume(self.lookahead.type)
-            self.term()
+        while self.lookahead.type in {SUM, SUB, ADDOP}:
+            if self.lookahead.type == SUM:
+                self.consume(SUM)
+                self.term()
+                self.semantic.add_op() # Semântico
+            elif self.lookahead.type == SUB:
+                self.consume(SUB)
+                self.term()
+                self.semantic.sub_op() # Semântico
+            else:
+                self.consume(self.lookahead.type)
+                self.term()
 
     def term(self):
         self.factor()
-        while self.lookahead.type in [MULT, DIV, MOD]:
-            self.consume(self.lookahead.type)
-            self.factor()
+        while self.lookahead.type in {MULT, DIV, MOD}:
+            if self.lookahead.type == MULT:
+                self.consume(MULT)
+                self.factor()
+                self.semantic.mul_op() # Semântico
+            if self.lookahead.type == DIV:
+                self.consume(DIV)
+                self.factor()
+                self.semantic.div_op() # Semântico
+            if self.lookahead.type == MOD:
+                self.consume(MOD)
+                self.factor()
+                self.semantic.mod_op() # Semântico
 
     def factor(self):
         if self.lookahead.type == IDENTIFIER:
+            var_name = self.lookahead.lexeme
+            if var_name in self.var_addresses:
+                var_address = self.var_addresses[var_name]
+                self.semantic.load_var(var_address)
+            else:
+                self.error(f"Variável '{var_name}' não declarada")
             self.consume(IDENTIFIER)
         elif self.lookahead.type in [NUM_INT, NUM_REAL]:
+            value = self.lookahead.value
+            self.semantic.load_const(value)
             self.consume(self.lookahead.type)
         elif self.lookahead.type == PARENTHESIS and self.lookahead.lexeme == '(':
             self.consume(PARENTHESIS)
             self.expression()
             self.consume(PARENTHESIS)
-        elif self.lookahead.type == TRUE:
-            self.consume(TRUE)
-        elif self.lookahead.type == FALSE:
-            self.consume(FALSE)
+        elif self.lookahead.type in [TRUE, FALSE]:
+            self.handle_boolean()
         elif self.lookahead.type == NOT:
             self.consume(NOT)
             self.factor()
         else:
             self.error("Fator inválido")
 
+    def handle_boolean(self):
+        if self.lookahead.type == TRUE:
+            self.semantic.load_const(1)
+            self.consume(TRUE)
+        elif self.lookahead.type == FALSE:
+            self.semantic.load_const(0)
+            self.consume(FALSE)
+
+class SemanticAnalyzer:
+    def __init__(self):
+        self.output = []
+        self.memory_index = 0
+        self.label_count = 1
+
+    def new_label(self):
+        label = f"L{self.label_count}"
+        self.label_count += 1
+        return label
+
+    def generate_code(self, code):
+        self.output.append(code)
+
+    def add_memory(self, count):
+        #Aloca memória para variáveis
+        self.generate_code(f"AMEM {count}")
+        self.memory_index += count
+
+    def release_memory(self, count):
+        #Libera memória
+        self.generate_code(f"DMEM {count}")
+        self.memory_index -= count
+
+    def start_program(self):
+        #Inicia o programa
+        self.generate_code("INPP")
+
+    def end_program(self):
+        #Finaliza o programa
+        self.generate_code("PARA")
+
+    def assign(self, var_address):
+        #Armazena o valor no endereço de variável
+        self.generate_code(f"ARMZ {var_address}")
+
+    def load_const(self, value):
+        #Carrega uma constante para o topo da pilha
+        self.generate_code(f"CRCT {value}")
+
+    def load_var(self, var_address):
+        #Carrega o valor de uma variável para o topo da pilh
+        self.generate_code(f"CRVL {var_address}")
+
+    def add_op(self):
+        # Operação de adição
+        self.generate_code("SOMA")
+
+    def mod_op(self):
+        # Operação de módulo
+        self.generate_code("MOD")
+
+    def sub_op(self):
+        #Operação de subtração
+        self.generate_code("SUBT")
+
+    def mul_op(self):
+        # Operação de multiplicação
+        self.generate_code("MULT")
+
+    def div_op(self):
+        #Operação de divisão
+        self.generate_code("DIVI")
+
+    def compare_equal(self):
+        # Comparação de igualdade
+        self.generate_code("CMIG")
+
+    def compare_less(self):
+        # Comparação de menor
+        self.generate_code("CMME")
+
+    def compare_not_equal(self):
+        # Comparação de diferente
+        self.generate_code("CMDG")
+
+    def compare_greater_equal(self):
+        # Comparação de maior igual
+        self.generate_code("CMAG")
+
+    def compare_less_equal(self):
+        #Comparação de menor igual
+        self.generate_code("CMEG")
+
+    def compare_greater(self):
+        #Comparação de maior
+        self.generate_code("CMMA")
+
+    def jump_if_false(self, label):
+        # Desvia se a condição for falsa
+        self.generate_code(f"DSVF {label}")
+
+    def jump(self, label):
+        # Desvio incondicional"""
+        self.generate_code(f"DSVS {label}")
+
+    def add_label(self, label):
+        # desvio
+        self.generate_code(f"{label}: NADA")
+
+    def write(self):
+        # Função write
+        self.generate_code("IMPR")
+
+    def print_output(self):
+        #Output no terminal
+        print("\n******************** MEPA ********************\n")
+        for line in self.output:
+            print(line)
+
+    # controle de fluxo
+
+    def generate_if(self, condition_code, true_block, false_block=None):
+        # estrutura if-else
+        label_false = self.new_label()
+        label_end = self.new_label()
+
+        # Código para condição
+        self.generate_code(condition_code)
+        self.jump_if_false(label_false)
+
+        # Bloco verdadeiro
+        true_block()
+
+        # Desvio para o fim do if, se houver bloco falso
+        if false_block:
+            self.jump(label_end)
+
+        # Rótulo para o bloco falso
+        self.add_label(label_false)
+        if false_block:
+            false_block()
+
+        # Rótulo final
+        if false_block:
+            self.add_label(label_end)
+
+    def generate_while(self, condition_code, loop_block):
+        # estrutura while
+        label_start = self.new_label()
+        label_end = self.new_label()
+
+        # Rótulo de início do loop
+        self.add_label(label_start)
+
+        # Condição de continuidade do loop
+        self.generate_code(condition_code)  # CRVL é chamados aqui
+        self.jump_if_false(label_end)
+
+        # Bloco de repetição
+        loop_block()
+
+        # início do loop
+        self.jump(label_start)
+
+        # fim do loop
+        self.add_label(label_end)
+
 # le o arquivo
 def read_file():
     if len(sys.argv) > 1:
         file_name = sys.argv[1]
     else:
-        file_name = 'files/error_case.txt'
+        file_name = r"C:\Users\gugsr\Documents\GitHub\compiler\src\files\semantic_success_case.pas"
 
     arq = open(file_name)
     buffer = arq.read()
